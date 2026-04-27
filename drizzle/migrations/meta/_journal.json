@@ -1,0 +1,62 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1776387946715,
+      "tag": "0000_amusing_jane_foster",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1776434832337,
+      "tag": "0001_conscious_tarantula",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1776437135409,
+      "tag": "0002_yummy_nick_fury",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1776463061654,
+      "tag": "0003_fat_dark_phoenix",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1776464069353,
+      "tag": "0004_next_file_no_function",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1776476377684,
+      "tag": "0005_phase2_tasks_notes_kill",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1776561694003,
+      "tag": "0006_contacts_and_deal_people",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1776566803000,
+      "tag": "0007_backfill_deal_main_contact",
+      "breakpoints": true
+    }
+  ]
+}

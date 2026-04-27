@@ -1,0 +1,12 @@
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "$comment": "BRANCH-SPECIFIC config-as-code for the `prototype` Railway service (design-reference deployment). This branch (design-reference/prototype) is NEVER merged to master, so this file overrides master's railway.json only for deployments from this branch. Key differences from master: (1) startCommand is 'next start' directly, bypassing the prestart db:migrate hook because this service has no real database — only mock data. Running the prestart would hang indefinitely on the non-functional DATABASE_URL placeholder. (2) restartPolicyMaxRetries reduced to 3 so a future config mistake does not produce minutes of crash-loop noise. See .planning/DEPLOY.md §8 Design Reference Deployment for the full pattern and the 2026-04-19 incident that produced this file.",
+  "build": {
+    "builder": "RAILPACK"
+  },
+  "deploy": {
+    "startCommand": "next start",
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 3
+  }
+}
