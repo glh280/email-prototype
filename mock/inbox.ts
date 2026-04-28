@@ -8,6 +8,7 @@
 
 import type {
   DigestGroup,
+  EmailMessage,
   InboxRow,
   InboxTab,
   MultiFileCandidate,
@@ -83,7 +84,7 @@ const baseRows: InboxRow[] = [
   },
   {
     threadId: "t_003",
-    messageId: "m_003",
+    messageId: "m_003c",
     subject: "Re: Velocity Office closing schedule",
     fromName: "Jamie Schiltknecht",
     fromAddress: "jamie@epique.com",
@@ -100,6 +101,33 @@ const baseRows: InboxRow[] = [
     dealId: "d_velocity_office",
     fileNo: "FL-2026-003",
     propertyAddress: "510 Velocity Blvd, Atlanta, GA",
+    // Oldest first; UI sorts newest-first on render.
+    messages: [
+      {
+        id: "m_003a",
+        fromName: "Jamie Schiltknecht",
+        toNames: ["Carrie Davis"],
+        sentAt: daysAgo(2).toISOString(),
+        snippet: "Wanted to nail down closing time for Velocity Office. Buyer prefers Friday morning.",
+        body: "Hi Carrie,\n\nWanted to get on your calendar to lock the Velocity Office closing. Buyer prefers Friday morning if you can swing it. Let me know what windows work.\n\n— Jamie",
+      },
+      {
+        id: "m_003b",
+        fromName: "Carrie Davis",
+        toNames: ["Jamie Schiltknecht"],
+        sentAt: daysAgo(1).toISOString(),
+        snippet: "Friday morning works. 10am or 11am? Title should be CTC by EOD Thursday.",
+        body: "Jamie —\n\nFriday morning works on our end. I can hold either 10am or 11am for you. Title commitment is in final review; I'm expecting CTC by EOD Thursday so we should be clean.\n\n— Carrie",
+      },
+      {
+        id: "m_003c",
+        fromName: "Jamie Schiltknecht",
+        toNames: ["Carrie Davis"],
+        sentAt: hoursAgo(4).toISOString(),
+        snippet: "Sounds good. Let's lock Friday at 10am. I'll loop in the buyer's agent. Confirming title is CTC?",
+        body: "Sounds good. Let's lock Friday at 10am — I'll loop in the buyer's agent and seller's side now. Just want to confirm title is CTC before I send the final invite.\n\n— Jamie",
+      },
+    ] satisfies EmailMessage[],
   },
   {
     threadId: "t_004",
