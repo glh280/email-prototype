@@ -128,3 +128,31 @@
     @apply font-sans;
   }
 }
+
+/*
+ * Print: only the original email + chain prints. Everything else hidden.
+ * The email message section in inbox2-preview-pane.tsx wraps its cards
+ * in id="email-print-target". Browser print → only that subtree is
+ * visible; we expand it full-width and reset chrome.
+ */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #email-print-target,
+  #email-print-target * {
+    visibility: visible;
+  }
+  #email-print-target {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    background: white;
+    color: black;
+    padding: 0.5in;
+  }
+  #email-print-target .no-print {
+    display: none !important;
+  }
+}

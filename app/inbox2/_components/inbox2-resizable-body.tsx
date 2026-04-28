@@ -4,16 +4,22 @@
  * SOURCE: new (no PROD source — Workspace shell resizable body)
  * CREATED: 2026-04-27
  * STATUS: new
- * REINTEGRATION: Phase 2+ persists widths to user prefs (cookie or DB).
+ * REINTEGRATION: L2+ moves cookie writes to a server action so widths
+ *   sync across devices.
  *
  * 3-pane resizable container with draggable dividers + viewport
- * auto-adjust. Pane widths kept in local state (no persistence yet).
- * Right pane is always `flex-1` and absorbs remaining space.
+ * auto-adjust. Right pane is always `flex-1` and absorbs remaining
+ * space.
  *
  * Constraints (px):
  *   left   200..320
- *   center 380..520  (raised from 280..520 — narrow center hid subjects)
- *   right  >= 420 (no max — soaks up remainder, default-largest)
+ *   center 380..520  (default = MAX so list shows wide subjects)
+ *   right  >= 420 (no max — soaks up remainder)
+ *
+ * Width persistence: server-rendered initial widths come from
+ * `npr-inbox2-pane-left` + `npr-inbox2-pane-center` cookies (read in
+ * `app/inbox2/page.tsx`). On drag end the new width is written back to
+ * the same cookie (1-year max-age).
  *
  * If viewport shrinks below the sum of current widths + right-min,
  * left/center are scaled down so right keeps its minimum. If viewport
@@ -32,6 +38,10 @@ import {
   type ReactNode,
 } from "react";
 import { cn } from "@/lib/utils";
+import {
+  INBOX2_PANE_LEFT_COOKIE,
+  INBOX2_PANE_CENTER_COOKIE,
+} from "@/lib/inbox-view-cookie";
 
 const LEFT_MIN = 200;
 const LEFT_MAX = 320;
@@ -40,7 +50,8 @@ const CENTER_MAX = 520;
 const RIGHT_MIN = 420;
 const DIVIDER_WIDTH = 4;
 const DEFAULT_LEFT = 240;
-const DEFAULT_CENTER = 420;
+const DEFAULT_CENTER = CENTER_MAX;
+const COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // 1 year
 
 type DragTarget = "left" | "center" | null;
 
@@ -48,17 +59,34 @@ type Props = {
   left: ReactNode;
   center: ReactNode;
   right: ReactNode;
+  initialLeftW: number | null;
+  initialCenterW: number | null;
 };
 
 function clamp(n: number, lo: number, hi: number) {
   return Math.max(lo, Math.min(hi, n));
 }
 
-export function Inbox2ResizableBody({ left, center, right }: Props) {
+function writeCookie(name: string, value: number) {
+  if (typeof document === "undefined") return;
+  document.cookie = `${name}=${value}; Max-Age=${COOKIE_MAX_AGE}; Path=/; SameSite=Lax`;
+}
+
+export function Inbox2ResizableBody({
+  left,
+  center,
+  right,
+  initialLeftW,
+  initialCenterW,
+}: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const draggingRef = useRef<DragTarget>(null);
-  const [leftW, setLeftW] = useState(DEFAULT_LEFT);
-  const [centerW, setCenterW] = useState(DEFAULT_CENTER);
+  const [leftW, setLeftW] = useState(() =>
+    clamp(initialLeftW ?? DEFAULT_LEFT, LEFT_MIN, LEFT_MAX),
+  );
+  const [centerW, setCenterW] = useState(() =>
+    clamp(initialCenterW ?? DEFAULT_CENTER, CENTER_MIN, CENTER_MAX),
+  );
   const [containerW, setContainerW] = useState<number | null>(null);
 
   useLayoutEffect(() => {
@@ -135,15 +163,18 @@ export function Inbox2ResizableBody({ left, center, right }: Props) {
 
   const onPointerUp = useCallback(
     (e: ReactPointerEvent<HTMLDivElement>) => {
-      if (draggingRef.current === null) return;
+      const target = draggingRef.current;
+      if (target === null) return;
       draggingRef.current = null;
       try {
         e.currentTarget.releasePointerCapture(e.pointerId);
       } catch {
         // Pointer was already released by the browser; safe to ignore.
       }
+      if (target === "left") writeCookie(INBOX2_PANE_LEFT_COOKIE, leftW);
+      else writeCookie(INBOX2_PANE_CENTER_COOKIE, centerW);
     },
-    [],
+    [leftW, centerW],
   );
 
   const isDragging = draggingRef.current !== null;

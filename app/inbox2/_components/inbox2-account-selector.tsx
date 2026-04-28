@@ -8,7 +8,7 @@
  *   server-driven context switch.
  */
 
-import { ChevronDown, AtSign, Check } from "lucide-react";
+import { ChevronDown, Check } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,7 +43,6 @@ export function Inbox2AccountSelector({ accounts, accountId, onChange }: Props) 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger className="inline-flex items-center gap-1.5 rounded border bg-background px-2.5 py-1 text-xs hover:bg-muted/50 outline-none">
-        <AtSign className="h-3 w-3 text-muted-foreground" aria-hidden />
         <span className="font-medium">{active.displayName}</span>
         <span className="text-muted-foreground hidden lg:inline truncate max-w-[140px]">
           {active.email}

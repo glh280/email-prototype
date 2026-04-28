@@ -35,6 +35,16 @@ export const DEFAULT_ACCOUNT_ID: Account["id"] = "acct-mike";
 export const DEFAULT_GROUP_ID: Group["id"] = "grp-lending";
 export const DEFAULT_NAV_VIEW: NavView = "inbox";
 
+/**
+ * The signed-in workspace user. Hardcoded in L1 — drives the nav-rail
+ * Comments badge (counts notes mentioning this user). Aligns with
+ * WORKSPACE_USERS[id="u_mike"] in mock/settings.ts.
+ *
+ * L2 sources this from the Cloudflare Access JWT claim, same path as
+ * `getCurrentUser()` in lib/current-user.ts on PROD.
+ */
+export const CURRENT_USER_ID = "u_mike";
+
 // NavView → backing InboxTab. Only "inbox" + "spam" map to mock data
 // today; other views render an empty state in the message list. This map
 // is the single source of truth for any consumer that needs to count or

@@ -14,7 +14,7 @@
  * (gap-1) so the eye sees them as a unit.
  */
 
-import { Paperclip } from "lucide-react";
+import { Paperclip, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { InboxRow } from "@/mock/types";
 import { Inbox2RowContextMenu } from "./inbox2-row-context-menu";
@@ -95,6 +95,12 @@ export function Inbox2MessageRow({
           {row.subject ?? "(no subject)"}
         </span>
         <span className="flex items-center gap-1 shrink-0">
+          {row.priorityTier === "HIGH" ? (
+            <AlertCircle
+              className="h-3.5 w-3.5 fill-rose-500 text-white dark:fill-rose-600"
+              aria-label="high priority"
+            />
+          ) : null}
           {row.hasAttachment ? (
             <Paperclip className="h-3 w-3 text-muted-foreground" aria-label="has attachment" />
           ) : null}

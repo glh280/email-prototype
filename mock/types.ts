@@ -264,6 +264,27 @@ export type LinkedEmail = {
 //       shareable filtered views.
 //     - DateRangePreset union: "today" | "7d" | "30d" | "all".
 //
+// 2026-04-28 — TeamNote (preview pane Team Notes section)
+//   Sources: new (no PROD source — Workspace shell internal-comment surface)
+//     - TeamNote { id, threadId, authorId, authorName, body, mentions?,
+//       createdAt }. Internal team chatter pinned to an email thread.
+//       Visible on every message in the chain (scoped by threadId, not
+//       messageId). Replaces the "Phase 1 placeholder" footer in
+//       `<Inbox2PreviewPane>`.
+//     - Mentions: { kind: "user" | "team", id }. Powers nav-rail
+//       Comments badge — count of notes mentioning CURRENT_USER_ID.
+//     - L1 stub: composer fires console.log + toast, no persistence.
+//     - L2+ replaces with `email_thread_notes` table + `note_mentions`
+//       join table; mention writes fan out via Pub/Sub.
+//
+// 2026-04-28 — Attachment + InboxRow.attachments
+//   Sources: new (no PROD source — preview-pane file list)
+//     - Attachment { id, name, sizeLabel, kind }. Per-thread file list
+//       rendered above team notes when row.hasAttachment is true. Lookup
+//       lives in `mock/attachments.ts` (keyed by threadId) so the bulk
+//       mock/inbox.ts file stays untouched. L2+ joins
+//       `gmail_message_attachments` rows server-side.
+//
 // (add entries below as iteration extends types)
 
 export type InboxTab = "all" | "by-file" | "multi-file" | "unassigned" | "team" | "spam";
@@ -537,6 +558,43 @@ export type Inbox2Filters = {
 };
 
 export const EMPTY_INBOX_FILTERS: Inbox2Filters = {};
+
+/**
+ * Internal team chatter pinned to an email thread. Visible on every
+ * message in the chain (scoped by threadId, not messageId). See
+ * CHANGE LOG entry 2026-04-28 — TeamNote.
+ */
+export type NoteMention = {
+  kind: "user" | "team";
+  /** WorkspaceUser.id or WorkspaceTeam.id. */
+  id: string;
+  /** Display label captured at write time so renderers don't have to look up. */
+  label: string;
+};
+
+export type TeamNote = {
+  id: string;
+  threadId: InboxRow["threadId"];
+  authorId: string;
+  authorName: string;
+  /** Plain text body — may contain `@Label` substrings echoing entries in `mentions`. */
+  body: string;
+  /** Tagged users / teams. Drives nav-rail Comments badge for the current user. */
+  mentions?: NoteMention[];
+  createdAt: string; // ISO
+};
+
+/**
+ * One row of the per-thread attachment list rendered in the preview pane.
+ * See CHANGE LOG entry 2026-04-28 — Attachment.
+ */
+export type Attachment = {
+  id: string;
+  name: string;
+  /** Pre-formatted human-readable size, e.g. "1.2 MB". */
+  sizeLabel: string;
+  kind: "pdf" | "docx" | "xlsx" | "image" | "other";
+};
 
 /** Count of active filter dimensions — used for the top-bar button badge. */
 export function countActiveFilters(f: Inbox2Filters): number {

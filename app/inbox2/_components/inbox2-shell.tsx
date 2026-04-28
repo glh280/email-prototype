@@ -28,18 +28,28 @@ import type {
   Inbox2ShellState,
   InboxRow,
   NavView,
+  NoteMention,
+  TeamNote,
   ViewBadge,
 } from "@/mock/types";
 import { EMPTY_INBOX_FILTERS } from "@/mock/types";
 import { rowsForTab } from "@/mock/inbox";
-import { NAV_VIEW_TO_INBOX_TAB } from "@/mock/inbox2";
+import { CURRENT_USER_ID, NAV_VIEW_TO_INBOX_TAB } from "@/mock/inbox2";
+import { notesForThread, TEAM_NOTES_BY_THREAD } from "@/mock/team-notes";
+import { WORKSPACE_USERS, WORKSPACE_TEAMS } from "@/mock/settings";
+import { toast } from "sonner";
 import { Inbox2TopBar } from "./inbox2-top-bar";
 import { Inbox2NavRail } from "./inbox2-nav-rail";
 import { Inbox2SubHeader } from "./inbox2-sub-header";
 import { Inbox2MessageList } from "./inbox2-message-list";
-import { Inbox2PreviewPane } from "./inbox2-preview-pane";
+import { Inbox2PreviewPane, type Mentionable } from "./inbox2-preview-pane";
 import { Inbox2ResizableBody } from "./inbox2-resizable-body";
 import { SettingsDialog } from "./settings/settings-dialog";
+import {
+  InboxComposeDialog,
+  type ComposeContext,
+} from "@/app/inbox/_components/inbox-compose-dialog";
+import { DEFAULT_FROM_MAILBOX } from "@/mock/inbox";
 
 /**
  * Apply top-bar Filter popover state to a row slice. Empty / undefined
@@ -87,6 +97,8 @@ type Props = {
   defaultAccountId: Account["id"];
   defaultGroupId: Group["id"];
   defaultNavView: NavView;
+  initialLeftW: number | null;
+  initialCenterW: number | null;
 };
 
 export function Inbox2Shell({
@@ -96,6 +108,8 @@ export function Inbox2Shell({
   defaultAccountId,
   defaultGroupId,
   defaultNavView,
+  initialLeftW,
+  initialCenterW,
 }: Props) {
   const [state, setState] = useState<Inbox2ShellState>({
     accountId: defaultAccountId,
@@ -106,6 +120,89 @@ export function Inbox2Shell({
     filters: EMPTY_INBOX_FILTERS,
   });
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [composeOpen, setComposeOpen] = useState(false);
+  const [composeContext, setComposeContext] = useState<ComposeContext | undefined>(
+    undefined,
+  );
+
+  function openCompose(ctx?: ComposeContext) {
+    setComposeContext(ctx);
+    setComposeOpen(true);
+  }
+  // Live team-note overrides — appended to the static fixture per threadId.
+  // Composer writes here so notes appear immediately. Mentions update the
+  // nav-rail Comments badge in the same render.
+  const [noteOverrides, setNoteOverrides] = useState<Record<string, TeamNote[]>>({});
+
+  const currentUser = useMemo(
+    () => WORKSPACE_USERS.find((u) => u.id === CURRENT_USER_ID),
+    [],
+  );
+
+  const mentionables = useMemo<Mentionable[]>(() => {
+    const users: Mentionable[] = WORKSPACE_USERS.filter((u) => u.status === "active").map(
+      (u) => ({ kind: "user", id: u.id, label: u.name, hint: u.email }),
+    );
+    const teams: Mentionable[] = WORKSPACE_TEAMS.map((t) => ({
+      kind: "team",
+      id: t.id,
+      label: t.name,
+      hint: `${t.memberIds.length} member${t.memberIds.length === 1 ? "" : "s"}`,
+    }));
+    return [...users, ...teams];
+  }, []);
+
+  function notesForCurrentThread(threadId: string): TeamNote[] {
+    return [...notesForThread(threadId), ...(noteOverrides[threadId] ?? [])];
+  }
+
+  function addNote(threadId: string, body: string, mentions: NoteMention[]) {
+    const author = currentUser;
+    const note: TeamNote = {
+      id: `tn_local_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      threadId,
+      authorId: author?.id ?? CURRENT_USER_ID,
+      authorName: author?.name ?? "You",
+      body,
+      mentions: mentions.length > 0 ? mentions : undefined,
+      createdAt: new Date().toISOString(),
+    };
+    setNoteOverrides((prev) => ({
+      ...prev,
+      [threadId]: [...(prev[threadId] ?? []), note],
+    }));
+    // eslint-disable-next-line no-console
+    console.log("[stub] inbox2-shell add-team-note", {
+      threadId,
+      body,
+      mentions,
+    });
+    toast.success("Team note posted", {
+      description:
+        mentions.length > 0
+          ? `Notified ${mentions.map((m) => m.label).join(", ")} (stub)`
+          : body.slice(0, 80),
+    });
+  }
+
+  // Comments badge — count notes mentioning the current user across all
+  // threads (fixtures + live overrides). Total === urgent so the badge
+  // shows in the rose tint, signalling unread mentions.
+  const commentsBadge = useMemo<ViewBadge | undefined>(() => {
+    let n = 0;
+    for (const list of Object.values(TEAM_NOTES_BY_THREAD)) {
+      for (const note of list) {
+        if (note.mentions?.some((m) => m.kind === "user" && m.id === CURRENT_USER_ID)) n++;
+      }
+    }
+    for (const list of Object.values(noteOverrides)) {
+      for (const note of list) {
+        if (note.mentions?.some((m) => m.kind === "user" && m.id === CURRENT_USER_ID)) n++;
+      }
+    }
+    if (n === 0) return undefined;
+    return { total: n, urgent: n };
+  }, [noteOverrides]);
 
   function patch(partial: Partial<Inbox2ShellState>) {
     setState((s) => ({ ...s, ...partial }));
@@ -176,8 +273,9 @@ export function Inbox2Shell({
     return {
       inbox: badgeFromRows(inboxRows),
       spam: badgeFromRows(spamRows),
+      comments: commentsBadge,
     };
-  }, [state.accountId, state.groupId, applyOverrides]);
+  }, [state.accountId, state.groupId, applyOverrides, commentsBadge]);
 
   // Per-group badge: unread inbox rows in the current account, scoped to
   // each group. Switching account updates all group counts.
@@ -223,6 +321,8 @@ export function Inbox2Shell({
         onFiltersChange={(next) => patch({ filters: next, selectedMessageId: null })}
       />
       <Inbox2ResizableBody
+        initialLeftW={initialLeftW}
+        initialCenterW={initialCenterW}
         left={
           <Inbox2NavRail
             navView={state.navView}
@@ -255,9 +355,27 @@ export function Inbox2Shell({
             </div>
           </>
         }
-        right={<Inbox2PreviewPane row={selectedRow} onClose={onPreviewClose} />}
+        right={
+          <Inbox2PreviewPane
+            row={selectedRow}
+            onClose={onPreviewClose}
+            notes={selectedRow ? notesForCurrentThread(selectedRow.threadId) : []}
+            onAddNote={(body, mentions) => {
+              if (!selectedRow) return;
+              addNote(selectedRow.threadId, body, mentions);
+            }}
+            mentionables={mentionables}
+            onCompose={openCompose}
+          />
+        }
       />
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+      <InboxComposeDialog
+        open={composeOpen}
+        onOpenChange={setComposeOpen}
+        defaultMailbox={DEFAULT_FROM_MAILBOX}
+        context={composeContext}
+      />
     </div>
   );
 }

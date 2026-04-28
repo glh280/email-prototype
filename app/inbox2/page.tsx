@@ -19,7 +19,12 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { AppHeader } from "@/components/app-header";
-import { INBOX_VIEW_COOKIE_NAME } from "@/lib/inbox-view-cookie";
+import {
+  INBOX_VIEW_COOKIE_NAME,
+  INBOX2_PANE_LEFT_COOKIE,
+  INBOX2_PANE_CENTER_COOKIE,
+  parsePaneWidth,
+} from "@/lib/inbox-view-cookie";
 import { Inbox2Shell } from "./_components/inbox2-shell";
 import { INBOX_ROWS } from "@/mock/inbox";
 import {
@@ -36,6 +41,13 @@ export default async function Inbox2Page() {
   const view = cookieStore.get(INBOX_VIEW_COOKIE_NAME)?.value;
   if (view === "classic") redirect("/inbox");
 
+  const initialLeftW = parsePaneWidth(
+    cookieStore.get(INBOX2_PANE_LEFT_COOKIE)?.value,
+  );
+  const initialCenterW = parsePaneWidth(
+    cookieStore.get(INBOX2_PANE_CENTER_COOKIE)?.value,
+  );
+
   return (
     <>
       <AppHeader />
@@ -47,6 +59,8 @@ export default async function Inbox2Page() {
         defaultAccountId={DEFAULT_ACCOUNT_ID}
         defaultGroupId={DEFAULT_GROUP_ID}
         defaultNavView={DEFAULT_NAV_VIEW}
+        initialLeftW={initialLeftW}
+        initialCenterW={initialCenterW}
       />
     </>
   );
