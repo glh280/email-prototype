@@ -71,7 +71,10 @@ export function Inbox2NavRail({
   onOpenSettings,
 }: Props) {
   function handleViewClick(next: NavView) {
-    if (next === navView) return;
+    // No early-return on same navView — re-clicking "Inbox" while a Custom
+    // Group is active is the operator's reset gesture (the shell handler
+    // clears groupId on inbox click). For other views the patch is
+    // idempotent.
     // eslint-disable-next-line no-console
     console.log("[stub] inbox2-nav-rail view click", { from: navView, to: next });
     onChange(next);

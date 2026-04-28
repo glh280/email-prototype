@@ -56,17 +56,6 @@ export function PreferencesSection() {
             ]}
           />
         </FieldRow>
-        <FieldRow label="Compose font size">
-          <SegmentedControl
-            value={prefs.composeFontSize}
-            onChange={(v) => set("composeFontSize", v)}
-            options={[
-              { id: "sm", label: "Small" },
-              { id: "md", label: "Medium" },
-              { id: "lg", label: "Large" },
-            ]}
-          />
-        </FieldRow>
       </DetailSection>
 
       <DetailSection label="Inbox behavior">
@@ -81,8 +70,11 @@ export function PreferencesSection() {
             ]}
           />
         </FieldRow>
-        <FieldRow label="Show snippet in row">
-          <Toggle checked={prefs.showSnippet} onChange={(v) => set("showSnippet", v)} />
+        <FieldRow label="Show suggested actions in preview">
+          <Toggle
+            checked={prefs.showSuggestedActions}
+            onChange={(v) => set("showSuggestedActions", v)}
+          />
         </FieldRow>
         <FieldRow label="Show AI summary in preview">
           <Toggle checked={prefs.showAiSummary} onChange={(v) => set("showAiSummary", v)} />
@@ -120,16 +112,6 @@ export function PreferencesSection() {
           <Toggle
             checked={prefs.enableKeyboardShortcuts}
             onChange={(v) => set("enableKeyboardShortcuts", v)}
-          />
-        </FieldRow>
-        <FieldRow label="Week starts on">
-          <SegmentedControl
-            value={prefs.weekStartsOn}
-            onChange={(v) => set("weekStartsOn", v)}
-            options={[
-              { id: "sun", label: "Sunday" },
-              { id: "mon", label: "Monday" },
-            ]}
           />
         </FieldRow>
       </DetailSection>

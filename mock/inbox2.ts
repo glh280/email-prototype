@@ -36,14 +36,26 @@ export const DEFAULT_GROUP_ID: Group["id"] = "grp-lending";
 export const DEFAULT_NAV_VIEW: NavView = "inbox";
 
 /**
- * The signed-in workspace user. Hardcoded in L1 — drives the nav-rail
- * Comments badge (counts notes mentioning this user). Aligns with
- * WORKSPACE_USERS[id="u_mike"] in mock/settings.ts.
+ * The signed-in workspace user. Hardcoded fallback in L1 — drives the
+ * nav-rail Comments badge (counts notes mentioning this user). Aligns
+ * with WORKSPACE_USERS[id="u_mike"] in mock/settings.ts.
  *
  * L2 sources this from the Cloudflare Access JWT claim, same path as
  * `getCurrentUser()` in lib/current-user.ts on PROD.
  */
 export const CURRENT_USER_ID = "u_mike";
+
+/**
+ * Account (mailbox) → workspace user id. Lets the prototype "switch
+ * perspective" via the top-bar account selector: nav-rail Comments badge
+ * + Comments view filter follow the selected account's owner.
+ *
+ * L2: derived from gmail_accounts.user_id once auth lands.
+ */
+export const ACCOUNT_TO_USER_ID: Record<Account["id"], string> = {
+  "acct-mike": "u_mike",
+  "acct-carrie": "u_carrie",
+};
 
 // NavView → backing InboxTab. Only "inbox" + "spam" map to mock data
 // today; other views render an empty state in the message list. This map

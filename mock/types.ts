@@ -540,6 +540,11 @@ export type Inbox2ShellState = {
   // Row-level mark-read / mark-unread overrides from the right-click
   // context menu. Keyed by messageId. See CHANGE LOG entry 2026-04-28.
   unreadOverrides: Record<InboxRow["messageId"], boolean>;
+  // Per-row assignee list set via the row context menu's "Assign to…"
+  // submenu. Keyed by messageId; values are WorkspaceUser ids. Drives
+  // the avatar circles in the message list and preview header. L2+
+  // replaces with a real `email_assignments` table.
+  assigneeOverrides: Record<InboxRow["messageId"], string[]>;
   // Top-bar Filter popover state. Applied inside currentTabRows
   // derivation. See CHANGE LOG entry 2026-04-28 — Inbox2Filters.
   filters: Inbox2Filters;

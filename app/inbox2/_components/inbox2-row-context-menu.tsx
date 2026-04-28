@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import {
   ContextMenu,
   ContextMenuContent,
+  ContextMenuGroup,
   ContextMenuItem,
   ContextMenuLabel,
   ContextMenuRadioGroup,
@@ -35,6 +36,7 @@ type Props = {
   row: InboxRow;
   effectiveIsUnread: boolean;
   onToggleUnread: (messageId: string, nextUnread: boolean) => void;
+  onAssign: (messageId: string, assigneeId: string | null) => void;
   children: React.ReactNode;
 };
 
@@ -55,6 +57,7 @@ export function Inbox2RowContextMenu({
   row,
   effectiveIsUnread,
   onToggleUnread,
+  onAssign,
   children,
 }: Props) {
   function stub(action: string, payload: Record<string, unknown> = {}) {
@@ -115,19 +118,33 @@ export function Inbox2RowContextMenu({
         <ContextMenuSub>
           <ContextMenuSubTrigger>Assign to…</ContextMenuSubTrigger>
           <ContextMenuSubContent>
-            <ContextMenuLabel>Workspace members</ContextMenuLabel>
-            {WORKSPACE_USERS.filter((u) => u.status === "active").map((u) => (
+            <ContextMenuGroup>
+              <ContextMenuLabel>Workspace members</ContextMenuLabel>
+              {WORKSPACE_USERS.filter((u) => u.status === "active").map((u) => (
+                <ContextMenuItem
+                  key={u.id}
+                  onClick={() => {
+                    onAssign(row.messageId, u.id);
+                    toast.success(`Assigned to ${u.name}`, {
+                      description: row.subject ?? row.messageId,
+                    });
+                  }}
+                >
+                  {u.name}
+                </ContextMenuItem>
+              ))}
+              <ContextMenuSeparator />
               <ContextMenuItem
-                key={u.id}
-                onClick={() => stub("assign", { assigneeId: u.id, name: u.name })}
+                onClick={() => {
+                  onAssign(row.messageId, null);
+                  toast.success("Unassigned", {
+                    description: row.subject ?? row.messageId,
+                  });
+                }}
               >
-                {u.name}
+                Unassign
               </ContextMenuItem>
-            ))}
-            <ContextMenuSeparator />
-            <ContextMenuItem onClick={() => stub("assign", { assigneeId: null })}>
-              Unassign
-            </ContextMenuItem>
+            </ContextMenuGroup>
           </ContextMenuSubContent>
         </ContextMenuSub>
 

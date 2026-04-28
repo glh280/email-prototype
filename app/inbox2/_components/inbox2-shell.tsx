@@ -34,7 +34,12 @@ import type {
 } from "@/mock/types";
 import { EMPTY_INBOX_FILTERS } from "@/mock/types";
 import { rowsForTab } from "@/mock/inbox";
-import { CURRENT_USER_ID, NAV_VIEW_TO_INBOX_TAB } from "@/mock/inbox2";
+import {
+  ACCOUNT_TO_USER_ID,
+  CURRENT_USER_ID,
+  DEFAULT_GROUP_ID,
+  NAV_VIEW_TO_INBOX_TAB,
+} from "@/mock/inbox2";
 import { notesForThread, TEAM_NOTES_BY_THREAD } from "@/mock/team-notes";
 import { WORKSPACE_USERS, WORKSPACE_TEAMS } from "@/mock/settings";
 import { toast } from "sonner";
@@ -117,6 +122,7 @@ export function Inbox2Shell({
     navView: defaultNavView,
     selectedMessageId: null,
     unreadOverrides: {},
+    assigneeOverrides: {},
     filters: EMPTY_INBOX_FILTERS,
   });
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -126,7 +132,16 @@ export function Inbox2Shell({
   );
 
   function openCompose(ctx?: ComposeContext) {
-    setComposeContext(ctx);
+    // Default the From mailbox to whichever account is selected in the
+    // top-bar dropdown — so Reply / Reply-all / Forward open with the
+    // operator's active mailbox, not the global DEFAULT_FROM_MAILBOX.
+    const selectedAccount = accounts.find((a) => a.id === state.accountId);
+    const merged: ComposeContext = {
+      mode: ctx?.mode ?? "new",
+      ...ctx,
+      from: ctx?.from ?? selectedAccount?.email,
+    };
+    setComposeContext(merged);
     setComposeOpen(true);
   }
   // Live team-note overrides — appended to the static fixture per threadId.
@@ -134,9 +149,25 @@ export function Inbox2Shell({
   // nav-rail Comments badge in the same render.
   const [noteOverrides, setNoteOverrides] = useState<Record<string, TeamNote[]>>({});
 
-  const currentUser = useMemo(
-    () => WORKSPACE_USERS.find((u) => u.id === CURRENT_USER_ID),
-    [],
+  // Two distinct "current user" concepts in the prototype:
+  //
+  // - `currentUserId` follows the top-bar account selector. Drives the
+  //   Comments nav-rail badge and the Comments view filter so the
+  //   operator can flip perspective ("show me Carrie's @-mentions").
+  //
+  // - `cfUserId` is the Cloudflare-Access signed-in user — fixed for
+  //   the session. Notes the operator authors are always stamped with
+  //   this identity, regardless of which mailbox is active. Mirrors
+  //   PROD `getCurrentUser()` semantics.
+  const currentUserId = useMemo(
+    () => ACCOUNT_TO_USER_ID[state.accountId] ?? CURRENT_USER_ID,
+    [state.accountId],
+  );
+  const cfUserId = CURRENT_USER_ID;
+
+  const cfUser = useMemo(
+    () => WORKSPACE_USERS.find((u) => u.id === cfUserId),
+    [cfUserId],
   );
 
   const mentionables = useMemo<Mentionable[]>(() => {
@@ -157,11 +188,14 @@ export function Inbox2Shell({
   }
 
   function addNote(threadId: string, body: string, mentions: NoteMention[]) {
-    const author = currentUser;
+    // Author is always the CF signed-in user, NOT the account selector
+    // perspective. Switching mailboxes does not impersonate the note
+    // author — that always reflects who is actually typing.
+    const author = cfUser;
     const note: TeamNote = {
       id: `tn_local_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
       threadId,
-      authorId: author?.id ?? CURRENT_USER_ID,
+      authorId: author?.id ?? cfUserId,
       authorName: author?.name ?? "You",
       body,
       mentions: mentions.length > 0 ? mentions : undefined,
@@ -192,17 +226,40 @@ export function Inbox2Shell({
     let n = 0;
     for (const list of Object.values(TEAM_NOTES_BY_THREAD)) {
       for (const note of list) {
-        if (note.mentions?.some((m) => m.kind === "user" && m.id === CURRENT_USER_ID)) n++;
+        if (note.mentions?.some((m) => m.kind === "user" && m.id === currentUserId)) n++;
       }
     }
     for (const list of Object.values(noteOverrides)) {
       for (const note of list) {
-        if (note.mentions?.some((m) => m.kind === "user" && m.id === CURRENT_USER_ID)) n++;
+        if (note.mentions?.some((m) => m.kind === "user" && m.id === currentUserId)) n++;
       }
     }
     if (n === 0) return undefined;
     return { total: n, urgent: n };
-  }, [noteOverrides]);
+  }, [noteOverrides, currentUserId]);
+
+  // Thread ids that contain at least one note mentioning the current user.
+  // Drives the Comments NavView row slice so that "Comments" lists every
+  // thread the operator is @-tagged in, regardless of account/group scope.
+  const mentionedThreadIds = useMemo<Set<string>>(() => {
+    const out = new Set<string>();
+    function scan(list: TeamNote[], threadId: string) {
+      if (
+        list.some((n) =>
+          n.mentions?.some((m) => m.kind === "user" && m.id === currentUserId),
+        )
+      ) {
+        out.add(threadId);
+      }
+    }
+    for (const [threadId, list] of Object.entries(TEAM_NOTES_BY_THREAD)) {
+      scan(list, threadId);
+    }
+    for (const [threadId, list] of Object.entries(noteOverrides)) {
+      scan(list, threadId);
+    }
+    return out;
+  }, [noteOverrides, currentUserId]);
 
   function patch(partial: Partial<Inbox2ShellState>) {
     setState((s) => ({ ...s, ...partial }));
@@ -235,10 +292,52 @@ export function Inbox2Shell({
     }));
   }
 
+  /**
+   * Add a single assignee to a row (idempotent). Pass null to clear all
+   * assignees for the row (the context-menu "Unassign" affordance).
+   */
+  function onAssign(messageId: string, assigneeId: string | null) {
+    // eslint-disable-next-line no-console
+    console.log("[stub-state] inbox2-shell assign", { messageId, assigneeId });
+    setState((s) => {
+      if (assigneeId === null) {
+        const next = { ...s.assigneeOverrides };
+        delete next[messageId];
+        return { ...s, assigneeOverrides: next };
+      }
+      const current = s.assigneeOverrides[messageId] ?? [];
+      if (current.includes(assigneeId)) return s;
+      return {
+        ...s,
+        assigneeOverrides: {
+          ...s.assigneeOverrides,
+          [messageId]: [...current, assigneeId],
+        },
+      };
+    });
+  }
+
   // Effective row slice for the current NavView + account + group + active
   // top-bar filters, with overrides applied. Single source list passed to
   // the message list and used for matchCount.
   const currentTabRows = useMemo<InboxRow[]>(() => {
+    if (state.navView === "comments") {
+      // Comments view = every thread the current user is @-mentioned in.
+      // Cross-account + cross-group on purpose: a mention is a personal
+      // signal, not a mailbox-scoped one.
+      const base = rowsForTab("all").filter((r) => mentionedThreadIds.has(r.threadId));
+      // Dedupe on threadId — a thread can have several rows in the inbox
+      // tab but the Comments list should show each thread once.
+      const seen = new Set<string>();
+      const deduped: InboxRow[] = [];
+      for (const r of base) {
+        if (seen.has(r.threadId)) continue;
+        seen.add(r.threadId);
+        deduped.push(r);
+      }
+      const overridden = applyOverrides(deduped);
+      return applyFilters(overridden, state.filters);
+    }
     const tab = NAV_VIEW_TO_INBOX_TAB[state.navView];
     if (!tab) return [];
     const base = rowsForTab(tab).filter(
@@ -246,7 +345,14 @@ export function Inbox2Shell({
     );
     const overridden = applyOverrides(base);
     return applyFilters(overridden, state.filters);
-  }, [state.navView, state.accountId, state.groupId, state.filters, applyOverrides]);
+  }, [
+    state.navView,
+    state.accountId,
+    state.groupId,
+    state.filters,
+    applyOverrides,
+    mentionedThreadIds,
+  ]);
 
   const matchCount = currentTabRows.length;
 
@@ -326,7 +432,18 @@ export function Inbox2Shell({
         left={
           <Inbox2NavRail
             navView={state.navView}
-            onChange={(v) => patch({ navView: v, selectedMessageId: null })}
+            onChange={(v) =>
+              setState((s) => ({
+                ...s,
+                navView: v,
+                // Re-clicking Inbox while a Custom Group is active should
+                // restore the unfiltered Inbox view. Resetting to the
+                // default group keeps the initial-load result (matches
+                // operator's mental "back to home" expectation).
+                groupId: v === "inbox" ? DEFAULT_GROUP_ID : s.groupId,
+                selectedMessageId: null,
+              }))
+            }
             badges={navViewBadges}
             groups={groups}
             groupId={state.groupId}
@@ -351,6 +468,8 @@ export function Inbox2Shell({
                 selectedMessageId={state.selectedMessageId}
                 onSelect={onSelect}
                 onToggleUnread={onToggleUnread}
+                onAssign={onAssign}
+                assigneeOverrides={state.assigneeOverrides}
               />
             </div>
           </>
@@ -366,6 +485,11 @@ export function Inbox2Shell({
             }}
             mentionables={mentionables}
             onCompose={openCompose}
+            assigneeIds={
+              selectedRow
+                ? state.assigneeOverrides[selectedRow.messageId] ?? []
+                : []
+            }
           />
         }
       />

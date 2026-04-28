@@ -14,7 +14,7 @@
  * Internal state: which section is currently selected.
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -32,6 +32,7 @@ import { LabelsSection } from "./labels";
 import { RulesSection } from "./rules";
 import { SignaturesSection } from "./signatures";
 import { PreferencesSection } from "./preferences";
+import { ProfileSection } from "./profile";
 import { PlaceholderSection } from "./placeholder";
 
 type Props = {
@@ -41,6 +42,7 @@ type Props = {
 
 function renderSection(id: SettingsSectionId): React.ReactNode {
   switch (id) {
+    case "profile":       return <ProfileSection />;
     case "accounts":      return <AccountsSection />;
     case "users":         return <UsersSection />;
     case "teams":         return <TeamsSection />;
@@ -61,6 +63,13 @@ export function SettingsDialog({ open, onOpenChange }: Props) {
   const [section, setSection] = useState<SettingsSectionId>(
     DEFAULT_SETTINGS_SECTION,
   );
+
+  // Always reset to the default section (Profile) when the dialog opens.
+  // Operator expectation: closing + reopening should land back on the
+  // canonical entry point, not wherever they left off.
+  useEffect(() => {
+    if (open) setSection(DEFAULT_SETTINGS_SECTION);
+  }, [open]);
 
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>

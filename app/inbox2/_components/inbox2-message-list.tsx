@@ -26,6 +26,8 @@ type Props = {
   selectedMessageId: string | null;
   onSelect: (messageId: string) => void;
   onToggleUnread: (messageId: string, nextUnread: boolean) => void;
+  onAssign: (messageId: string, assigneeId: string | null) => void;
+  assigneeOverrides: Record<string, string[]>;
 };
 
 export function Inbox2MessageList({
@@ -34,6 +36,8 @@ export function Inbox2MessageList({
   selectedMessageId,
   onSelect,
   onToggleUnread,
+  onAssign,
+  assigneeOverrides,
 }: Props) {
   if (rows.length === 0) {
     const hasMockedTab = NAV_VIEW_TO_INBOX_TAB[navView] !== undefined;
@@ -49,6 +53,8 @@ export function Inbox2MessageList({
           selected={r.messageId === selectedMessageId}
           onSelect={onSelect}
           onToggleUnread={onToggleUnread}
+          onAssign={onAssign}
+          assigneeIds={assigneeOverrides[r.messageId] ?? []}
         />
       ))}
     </ul>

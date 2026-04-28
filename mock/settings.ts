@@ -89,7 +89,7 @@ export const SETTINGS_CLUSTER_LABEL: Record<SettingsSection["cluster"], string> 
   billing: "Billing",
 };
 
-export const DEFAULT_SETTINGS_SECTION: SettingsSectionId = "accounts";
+export const DEFAULT_SETTINGS_SECTION: SettingsSectionId = "profile";
 
 // ---------------------------------------------------------------------------
 // Users — workspace members
@@ -542,30 +542,32 @@ export type Preferences = {
   theme: "system" | "light" | "dark";
   density: "comfortable" | "cozy" | "compact";
   defaultSort: "newest" | "oldest" | "priority";
-  showSnippet: boolean;
+  /**
+   * Show curated next-step affordances inside the preview pane.
+   * Replaces the earlier `showSnippet` toggle (snippet always lives in
+   * the row body now; suggested actions are the meaningful preview
+   * affordance worth gating).
+   */
+  showSuggestedActions: boolean;
   showAiSummary: boolean;
   markReadOnPreview: boolean;
   autoExpandThreads: boolean;
   enableKeyboardShortcuts: boolean;
   notificationSound: "off" | "subtle" | "ding";
   desktopNotifications: boolean;
-  weekStartsOn: "sun" | "mon";
-  composeFontSize: "sm" | "md" | "lg";
 };
 
 export const DEFAULT_PREFERENCES: Preferences = {
   theme: "system",
   density: "cozy",
   defaultSort: "priority",
-  showSnippet: false,
+  showSuggestedActions: true,
   showAiSummary: true,
   markReadOnPreview: true,
   autoExpandThreads: false,
   enableKeyboardShortcuts: true,
   notificationSound: "subtle",
   desktopNotifications: true,
-  weekStartsOn: "mon",
-  composeFontSize: "md",
 };
 
 // ---------------------------------------------------------------------------

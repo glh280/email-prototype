@@ -64,6 +64,7 @@ import type {
   TeamNote,
 } from "@/mock/types";
 import { attachmentsForThread } from "@/mock/attachments";
+import { AssigneeAvatars } from "./inbox2-assignee-avatars";
 
 export type Mentionable = {
   kind: "user" | "team";
@@ -80,6 +81,7 @@ type Props = {
   onAddNote: (body: string, mentions: NoteMention[]) => void;
   mentionables: Mentionable[];
   onCompose: (ctx?: ComposeContext) => void;
+  assigneeIds: string[];
 };
 
 export function Inbox2PreviewPane({
@@ -89,6 +91,7 @@ export function Inbox2PreviewPane({
   onAddNote,
   mentionables,
   onCompose,
+  assigneeIds,
 }: Props) {
   return (
     <aside
@@ -103,6 +106,7 @@ export function Inbox2PreviewPane({
           onAddNote={onAddNote}
           mentionables={mentionables}
           onCompose={onCompose}
+          assigneeIds={assigneeIds}
         />
       ) : (
         <EmptyState />
@@ -131,6 +135,7 @@ function PreviewContent({
   onAddNote,
   mentionables,
   onCompose,
+  assigneeIds,
 }: {
   row: InboxRow;
   onClose: () => void;
@@ -138,6 +143,7 @@ function PreviewContent({
   onAddNote: (body: string, mentions: NoteMention[]) => void;
   mentionables: Mentionable[];
   onCompose: (ctx?: ComposeContext) => void;
+  assigneeIds: string[];
 }) {
   const attachments = attachmentsForThread(row.threadId);
   // Newest-first; if no full thread, synthesize a single message from row.
@@ -188,6 +194,11 @@ function PreviewContent({
       cc: mode === "reply-all" ? allCcs : undefined,
       subject: mode === "forward" ? forwardSubject : replySubject,
       quotedBody: `On ${formatSent(newest?.sentAt ?? row.sentAt.toISOString())}, ${senderName} wrote:\n\n${quotedBody}`,
+      // Pass the original thread's attachments so the compose dialog
+      // can offer an "Include original attachments" affordance. Forward
+      // mode pre-fills nothing in the To field, but the operator
+      // typically wants to carry the files along — same surface.
+      originalAttachments: attachments.length > 0 ? attachments : undefined,
     };
   }
 
@@ -209,37 +220,51 @@ function PreviewContent({
               {attachments.length > 0 ? (
                 <AttachmentChip attachments={attachments} threadId={row.threadId} />
               ) : null}
+              {assigneeIds.length > 0 ? (
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="text-[10px] uppercase tracking-wide text-muted-foreground/80">
+                    Assigned
+                  </span>
+                  <AssigneeAvatars assigneeIds={assigneeIds} size="md" />
+                </span>
+              ) : null}
             </div>
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              // eslint-disable-next-line no-console
-              console.log("[stub] inbox2-preview-pane close", { messageId: row.messageId });
-              onClose();
-            }}
-            aria-label="Close preview"
-            className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground shrink-0"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-        <div className="flex items-center gap-1">
-          <ReplyToolButton
-            label="Reply"
-            icon={Reply}
-            onClick={() => onCompose(makeReplyCtx("reply"))}
-          />
-          <ReplyToolButton
-            label="Reply all"
-            icon={ReplyAll}
-            onClick={() => onCompose(makeReplyCtx("reply-all"))}
-          />
-          <ReplyToolButton
-            label="Forward"
-            icon={Forward}
-            onClick={() => onCompose(makeReplyCtx("forward"))}
-          />
+          {/*
+            Reply / Reply all / Forward sit immediately to the left of the
+            close button so the operator's primary outbound actions are
+            anchored to the preview chrome, not the body. Mirrors Missive +
+            Front placement.
+          */}
+          <div className="flex items-center gap-1 shrink-0">
+            <ReplyToolButton
+              label="Reply"
+              icon={Reply}
+              onClick={() => onCompose(makeReplyCtx("reply"))}
+            />
+            <ReplyToolButton
+              label="Reply all"
+              icon={ReplyAll}
+              onClick={() => onCompose(makeReplyCtx("reply-all"))}
+            />
+            <ReplyToolButton
+              label="Forward"
+              icon={Forward}
+              onClick={() => onCompose(makeReplyCtx("forward"))}
+            />
+            <button
+              type="button"
+              onClick={() => {
+                // eslint-disable-next-line no-console
+                console.log("[stub] inbox2-preview-pane close", { messageId: row.messageId });
+                onClose();
+              }}
+              aria-label="Close preview"
+              className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground ml-1"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       </header>
 

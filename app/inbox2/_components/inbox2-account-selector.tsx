@@ -12,6 +12,7 @@ import { ChevronDown, Check } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -50,25 +51,27 @@ export function Inbox2AccountSelector({ accounts, accountId, onChange }: Props) 
         <ChevronDown className="h-3 w-3 text-muted-foreground" aria-hidden />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="min-w-[220px]">
-        <DropdownMenuLabel className="text-[10px] uppercase tracking-wide text-muted-foreground">
-          Accounts
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        {accounts.map((a) => (
-          <DropdownMenuItem
-            key={a.id}
-            onClick={() => handleSelect(a)}
-            className="text-xs flex items-center gap-2"
-          >
-            <span className="flex-1 min-w-0">
-              <div className="font-medium truncate">{a.displayName}</div>
-              <div className="text-muted-foreground truncate">{a.email}</div>
-            </span>
-            {a.id === accountId ? (
-              <Check className="h-3 w-3 text-primary shrink-0" aria-hidden />
-            ) : null}
-          </DropdownMenuItem>
-        ))}
+        <DropdownMenuGroup>
+          <DropdownMenuLabel className="text-[10px] uppercase tracking-wide text-muted-foreground">
+            Accounts
+          </DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          {accounts.map((a) => (
+            <DropdownMenuItem
+              key={a.id}
+              onClick={() => handleSelect(a)}
+              className="text-xs flex items-center gap-2"
+            >
+              <span className="flex-1 min-w-0">
+                <div className="font-medium truncate">{a.displayName}</div>
+                <div className="text-muted-foreground truncate">{a.email}</div>
+              </span>
+              {a.id === accountId ? (
+                <Check className="h-3 w-3 text-primary shrink-0" aria-hidden />
+              ) : null}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuGroup>
       </DropdownMenuContent>
     </DropdownMenu>
   );
