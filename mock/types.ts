@@ -276,6 +276,8 @@ export type InboxRow = {
   candidates?: MultiFileCandidate[];
   /** Unassigned tab: highest-confidence suggestion ≥70%, if any. */
   suggestion?: UnassignedSuggestion | null;
+  /** Full thread chain shown on expand. Oldest-first; UI sorts newest-first. */
+  messages?: EmailMessage[];
 };
 
 export type InboxFilters = {

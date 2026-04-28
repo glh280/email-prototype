@@ -14,7 +14,7 @@
 import { useState } from "react";
 import { Paperclip, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { InboxRow } from "@/mock/types";
+import type { EmailMessage, InboxRow } from "@/mock/types";
 import { PriorityChip } from "./priority-chip";
 
 function formatTime(d: Date): string {
@@ -132,11 +132,53 @@ export function InboxRowAll({ row, metaBadge, onMarkRead }: Props) {
       </button>
       {expanded ? (
         <div className="px-4 pb-3 -mt-1 text-xs text-muted-foreground">
-          <div className="rounded bg-muted/40 p-3">
-            {row.snippet ?? "(no preview available — full body fetch deferred to L2+)"}
-          </div>
+          {row.messages && row.messages.length > 0 ? (
+            <ThreadChain messages={row.messages} />
+          ) : (
+            <div className="rounded bg-muted/40 p-3">
+              {row.snippet ?? "(no preview available — full body fetch deferred to L2+)"}
+            </div>
+          )}
         </div>
       ) : null}
     </li>
+  );
+}
+
+function ThreadChain({ messages }: { messages: EmailMessage[] }) {
+  const sorted = [...messages].sort((a, b) =>
+    a.sentAt < b.sentAt ? 1 : -1,
+  );
+  return (
+    <ol className="space-y-2">
+      {sorted.map((m, idx) => (
+        <li
+          key={m.id}
+          className={cn(
+            "rounded bg-background border p-3",
+            idx === 0 && "ring-1 ring-primary/20",
+          )}
+        >
+          <div className="flex items-baseline justify-between gap-2 text-[11px]">
+            <span>
+              <span className="font-medium text-foreground">{m.fromName}</span>
+              {m.toNames && m.toNames.length > 0 ? (
+                <span className="text-muted-foreground"> → {m.toNames.join(", ")}</span>
+              ) : null}
+            </span>
+            <span className="text-muted-foreground shrink-0">
+              {formatTime(new Date(m.sentAt))}
+            </span>
+          </div>
+          {m.body ? (
+            <div className="mt-1.5 text-xs text-foreground/80 whitespace-pre-wrap">
+              {m.body}
+            </div>
+          ) : (
+            <div className="mt-1.5 text-xs text-muted-foreground">{m.snippet}</div>
+          )}
+        </li>
+      ))}
+    </ol>
   );
 }
