@@ -216,6 +216,21 @@ export type LinkedEmail = {
 //       counts.
 //     - "Urgent" semantic: failed match/triage, overdue, unassigned
 //       critical, anything that should pull operator attention NOW.
+//
+// 2026-04-27 — NavView Missive realignment (top-bar / left-rail split)
+//   Sources: new
+//     - NavView union replaced. Missive pattern: left rail = where I am,
+//       top bar = what I can do. NavView is now ONLY the left-rail nav
+//       items: inbox | team-inboxes | calendars | assigned-me |
+//       assigned-others | comments | trash | spam.
+//     - DROPPED from NavView: by-file, multi-file, unassigned, team,
+//       sent, drafts, settings. by-file/multi-file/unassigned/team were
+//       triage tabs — fold into "inbox" filter chips later. sent/drafts
+//       reachable via Compose flow + future per-account expand. settings
+//       reachable via Avatar menu only.
+//     - Group navigation moves from top-bar dropdown into the nav rail's
+//       "Custom groups/teams" section (groupId still owned by
+//       Inbox2ShellState; nav rail clicks call onGroupChange).
 // (add entries below as iteration extends types)
 
 export type InboxTab = "all" | "by-file" | "multi-file" | "unassigned" | "team" | "spam";
@@ -414,18 +429,32 @@ export type WorkspaceContext = {
   workspaceLabel: string;
 };
 
-export type NavView = InboxTab | "sent" | "drafts" | "settings";
+/**
+ * Left-rail navigation items. Missive pattern — `where I am` lives here,
+ * `what I can do` lives in the top bar.
+ *
+ * "inbox" is the default landing view (formerly "all"). Other entries are
+ * queue-shaped placeholders in L1 (no row data wired yet).
+ */
+export type NavView =
+  | "inbox"
+  | "team-inboxes"
+  | "calendars"
+  | "assigned-me"
+  | "assigned-others"
+  | "comments"
+  | "trash"
+  | "spam";
 
 export const NAV_VIEW_ORDER: readonly NavView[] = [
-  "all",
-  "by-file",
-  "multi-file",
-  "unassigned",
-  "team",
+  "inbox",
+  "team-inboxes",
+  "calendars",
+  "assigned-me",
+  "assigned-others",
+  "comments",
+  "trash",
   "spam",
-  "sent",
-  "drafts",
-  "settings",
 ] as const;
 
 export type Inbox2ShellState = {

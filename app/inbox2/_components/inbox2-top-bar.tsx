@@ -4,19 +4,21 @@
  * SOURCE: new (no PROD source — Workspace shell global top bar)
  * CREATED: 2026-04-27
  * STATUS: new (compose reuses existing InboxComposeButton; notif + avatar
- *   stubbed)
+ *   stubbed; search + filter stubbed)
  * REINTEGRATION: Phase 2+ wires real notification panel + avatar menu
- *   (delegates to AppHeader's user/logout in PROD).
+ *   (delegates to AppHeader's user/logout in PROD), real search input
+ *   (server-driven FTS), real filter dropdown.
  *
- * Iter (2026-04-27): scope row reordered to View · Workspace · Account ·
- * Group. The [Classic|Workspace] surface toggle stays at the far left.
- * Bell badge color follows the urgent/total ViewBadge rule (red when
- * urgent > 0, neutral otherwise).
+ * Iter (2026-04-27): Missive realignment. Top bar now owns ACTIONS only:
+ * Compose, Search, Filter, Account, Notifications, Avatar. View / group /
+ * workspace selectors removed — those are nav-rail concerns. The
+ * [Classic|Workspace] surface toggle stays at the far left.
  */
 
-import { Bell, ChevronDown } from "lucide-react";
+import { Bell, ChevronDown, Filter as FilterIcon, Search as SearchIcon } from "lucide-react";
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
@@ -24,39 +26,34 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { InboxViewToggle } from "@/components/inbox-view-toggle";
 import { InboxComposeButton } from "@/app/inbox/_components/inbox-compose-button";
 import { Inbox2AccountSelector } from "./inbox2-account-selector";
-import { Inbox2GroupSelector } from "./inbox2-group-selector";
-import { Inbox2ViewSelector } from "./inbox2-view-selector";
 import { DEFAULT_FROM_MAILBOX } from "@/mock/inbox";
-import type { Account, Group, NavView, ViewBadge } from "@/mock/types";
+import type { Account, ViewBadge } from "@/mock/types";
+
+const FILTER_OPTIONS = [
+  "Unread",
+  "High priority",
+  "Has attachment",
+  "AI flagged",
+  "File-linked",
+] as const;
 
 type Props = {
-  workspaceLabel: string;
   accounts: Account[];
   accountId: Account["id"];
   onAccountChange: (next: Account["id"]) => void;
-  groups: Group[];
-  groupId: Group["id"];
-  onGroupChange: (next: Group["id"]) => void;
-  navView: NavView;
-  onNavViewChange: (next: NavView) => void;
   notificationBadge: ViewBadge;
 };
 
 export function Inbox2TopBar({
-  workspaceLabel,
   accounts,
   accountId,
   onAccountChange,
-  groups,
-  groupId,
-  onGroupChange,
-  navView,
-  onNavViewChange,
   notificationBadge,
 }: Props) {
   const account = accounts.find((a) => a.id === accountId) ?? accounts[0];
@@ -79,6 +76,19 @@ export function Inbox2TopBar({
     );
   }
 
+  function searchSubmit(value: string) {
+    if (!value.trim()) return;
+    // eslint-disable-next-line no-console
+    console.log("[stub] inbox2-top-bar search submit", { q: value });
+    toast(`Search "${value}" — stub (no client filter in Phase 1)`);
+  }
+
+  function filterClick(option: string) {
+    // eslint-disable-next-line no-console
+    console.log("[stub] inbox2-top-bar filter toggle", { option });
+    toast(`Filter "${option}" — stub (no wire-up in Phase 1)`);
+  }
+
   const isUrgent = notificationBadge.urgent > 0;
   const badgeCount = isUrgent ? notificationBadge.urgent : notificationBadge.total;
 
@@ -92,22 +102,52 @@ export function Inbox2TopBar({
     <header className="border-b bg-background px-4 py-2 flex items-center gap-3 flex-wrap">
       <InboxViewToggle />
       <div className="h-5 w-px bg-border mx-1" aria-hidden />
-      <Inbox2ViewSelector navView={navView} onChange={onNavViewChange} />
-      <span className="text-xs font-semibold tracking-tight text-muted-foreground">
-        {workspaceLabel}
-      </span>
+      <InboxComposeButton defaultMailbox={DEFAULT_FROM_MAILBOX} />
+      <div className="relative flex-1 min-w-[180px] max-w-md">
+        <SearchIcon
+          className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground"
+          aria-hidden
+        />
+        <Input
+          type="search"
+          placeholder="Search…"
+          className="h-8 pl-7 text-xs"
+          onKeyDown={(e) => {
+            if (e.key === "Enter") searchSubmit(e.currentTarget.value);
+          }}
+        />
+      </div>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          aria-label="Filter"
+          className="inline-flex items-center gap-1 rounded border bg-background px-2 py-1 text-xs hover:bg-muted/50 outline-none"
+        >
+          <FilterIcon className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
+          <span>Filter</span>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="min-w-[180px]">
+          <DropdownMenuLabel className="text-[10px] uppercase tracking-wide text-muted-foreground">
+            Filter
+          </DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          {FILTER_OPTIONS.map((opt) => (
+            <DropdownMenuCheckboxItem
+              key={opt}
+              className="text-xs"
+              checked={false}
+              onCheckedChange={() => filterClick(opt)}
+            >
+              {opt}
+            </DropdownMenuCheckboxItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <div className="flex-1" />
       <Inbox2AccountSelector
         accounts={accounts}
         accountId={accountId}
         onChange={onAccountChange}
       />
-      <Inbox2GroupSelector
-        groups={groups}
-        groupId={groupId}
-        onChange={onGroupChange}
-      />
-      <div className="flex-1" />
-      <InboxComposeButton defaultMailbox={DEFAULT_FROM_MAILBOX} />
       <button
         type="button"
         onClick={notifClick}
@@ -151,6 +191,9 @@ export function Inbox2TopBar({
           </DropdownMenuItem>
           <DropdownMenuItem className="text-xs" onClick={() => avatarMenuClick("Account preferences")}>
             Account preferences
+          </DropdownMenuItem>
+          <DropdownMenuItem className="text-xs" onClick={() => avatarMenuClick("Settings")}>
+            Settings
           </DropdownMenuItem>
           <DropdownMenuItem className="text-xs" onClick={() => avatarMenuClick("Help")}>
             Help

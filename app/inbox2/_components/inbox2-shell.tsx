@@ -7,18 +7,17 @@
  * REINTEGRATION: Phase 2+ lifts state to URL params + server-driven
  *   message list; preview pane gains real thread reader.
  *
- * Phase 1 layout grid (body is now resizable, see Inbox2ResizableBody):
+ * Layout (post Missive realignment — context line dropped):
  *   ┌────────────────────────── TopBar ─────────────────────────┐
- *   ├───────────────────────── ContextLine ─────────────────────┤
  *   │ NavRail ║ SubHeader + MessageList ║ Preview pane          │
- *   │  200..  ║       280..520          ║   >= 420 (flex-1)     │
- *   │  320 px ║         px              ║                       │
+ *   │ (views  ║       380..520          ║   >= 420 (flex-1)     │
+ *   │ + grps) ║         px              ║                       │
  *   └─────────╨─────────────────────────╨───────────────────────┘
  *   ║ = draggable divider
  *
- * Owns Inbox2ShellState. All children receive props + change handlers.
- * No URL state in Phase 1; refresh resets selectedMessageId and resets
- * accountId / groupId / navView to defaults from `mock/inbox2.ts`.
+ * Owns Inbox2ShellState. NavRail drives both navView and groupId; top
+ * bar drives accountId + actions. workspaceLabel passed in but no longer
+ * rendered in shell chrome (kept on props for future header reuse).
  */
 
 import { useMemo, useState } from "react";
@@ -31,7 +30,6 @@ import type {
   ViewBadge,
 } from "@/mock/types";
 import { Inbox2TopBar } from "./inbox2-top-bar";
-import { Inbox2ContextLine } from "./inbox2-context-line";
 import { Inbox2NavRail } from "./inbox2-nav-rail";
 import { Inbox2SubHeader } from "./inbox2-sub-header";
 import { Inbox2MessageList } from "./inbox2-message-list";
@@ -48,18 +46,19 @@ type Props = {
   defaultNavView: NavView;
   notificationBadge: ViewBadge;
   navViewBadges?: Partial<Record<NavView, ViewBadge>>;
+  groupBadges?: Partial<Record<Group["id"], ViewBadge>>;
 };
 
 export function Inbox2Shell({
   rows,
   accounts,
   groups,
-  workspaceLabel,
   defaultAccountId,
   defaultGroupId,
   defaultNavView,
   notificationBadge,
   navViewBadges,
+  groupBadges,
 }: Props) {
   const [state, setState] = useState<Inbox2ShellState>({
     accountId: defaultAccountId,
@@ -71,15 +70,6 @@ export function Inbox2Shell({
   function patch(partial: Partial<Inbox2ShellState>) {
     setState((s) => ({ ...s, ...partial }));
   }
-
-  const account = useMemo(
-    () => accounts.find((a) => a.id === state.accountId) ?? accounts[0],
-    [accounts, state.accountId],
-  );
-  const group = useMemo(
-    () => groups.find((g) => g.id === state.groupId) ?? groups[0],
-    [groups, state.groupId],
-  );
 
   const selectedRow = useMemo(
     () =>
@@ -108,22 +98,10 @@ export function Inbox2Shell({
   return (
     <div className="flex flex-col h-[calc(100vh-3.25rem)] bg-background">
       <Inbox2TopBar
-        workspaceLabel={workspaceLabel}
         accounts={accounts}
         accountId={state.accountId}
         onAccountChange={(id) => patch({ accountId: id, selectedMessageId: null })}
-        groups={groups}
-        groupId={state.groupId}
-        onGroupChange={(id) => patch({ groupId: id, selectedMessageId: null })}
-        navView={state.navView}
-        onNavViewChange={(v) => patch({ navView: v, selectedMessageId: null })}
         notificationBadge={notificationBadge}
-      />
-      <Inbox2ContextLine
-        workspaceLabel={workspaceLabel}
-        account={account}
-        group={group}
-        navView={state.navView}
       />
       <Inbox2ResizableBody
         left={
@@ -131,6 +109,10 @@ export function Inbox2Shell({
             navView={state.navView}
             onChange={(v) => patch({ navView: v, selectedMessageId: null })}
             badges={navViewBadges}
+            groups={groups}
+            groupId={state.groupId}
+            onGroupChange={(id) => patch({ groupId: id, selectedMessageId: null })}
+            groupBadges={groupBadges}
           />
         }
         center={

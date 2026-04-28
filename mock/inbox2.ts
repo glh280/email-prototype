@@ -33,18 +33,17 @@ export const GROUPS: Group[] = [
 
 export const DEFAULT_ACCOUNT_ID: Account["id"] = "acct-mike";
 export const DEFAULT_GROUP_ID: Group["id"] = "grp-lending";
-export const DEFAULT_NAV_VIEW: NavView = "all";
+export const DEFAULT_NAV_VIEW: NavView = "inbox";
 
 export const NAV_VIEW_LABEL: Record<NavView, string> = {
-  "all": "Inbox",
-  "by-file": "By File",
-  "multi-file": "Multi-File",
-  "unassigned": "Unassigned",
-  "team": "Team",
+  "inbox": "Inbox",
+  "team-inboxes": "Team Inboxes",
+  "calendars": "Calendars",
+  "assigned-me": "Assigned to me",
+  "assigned-others": "Assigned to others",
+  "comments": "Comments",
+  "trash": "Trash",
   "spam": "Spam",
-  "sent": "Sent",
-  "drafts": "Drafts",
-  "settings": "Settings",
 };
 
 /**
@@ -59,11 +58,20 @@ export const MOCK_NOTIFICATION_BADGE: ViewBadge = { total: 3, urgent: 1 };
  * non-zero count are included. `urgent` drives red highlighting.
  */
 export const NAV_VIEW_BADGES: Partial<Record<NavView, ViewBadge>> = {
-  all:        { total: 7,  urgent: 0 },
-  unassigned: { total: 4,  urgent: 2 },
-  team:       { total: 12, urgent: 0 },
-  spam:       { total: 1,  urgent: 0 },
-  drafts:     { total: 2,  urgent: 0 },
+  "inbox":           { total: 7,  urgent: 0 },
+  "assigned-me":     { total: 3,  urgent: 1 },
+  "assigned-others": { total: 5,  urgent: 0 },
+  "comments":        { total: 2,  urgent: 0 },
+  "spam":            { total: 1,  urgent: 0 },
+};
+
+/**
+ * Per-group badge counts shown in the left-rail "Custom groups" section.
+ * Mirrors NAV_VIEW_BADGES shape so the same urgency rule applies.
+ */
+export const GROUP_BADGES: Partial<Record<Group["id"], ViewBadge>> = {
+  "grp-lending": { total: 4, urgent: 1 },
+  "grp-title":   { total: 2, urgent: 0 },
 };
 
 export function findAccount(id: Account["id"]): Account {

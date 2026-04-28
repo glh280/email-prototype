@@ -5,50 +5,43 @@
  * CREATED: 2026-04-27
  * STATUS: new (stubbed click)
  * REINTEGRATION: Phase 2+ replaces local navView state with URL push
- *   (`/inbox2/<view>` or `?view=`).
+ *   (`/inbox2/<view>` or `?view=`). Groups section becomes server-driven.
  *
- * Vertical icon+label nav. Click sets shell.navView. No router push in
- * Phase 1.
+ * Iter (2026-04-27): Missive realignment. NavView union shrunk to the
+ * 8 left-rail items; groups now own the bottom of this rail (formerly a
+ * top-bar dropdown). Settings dropped from this rail — reachable via the
+ * Avatar menu in the top bar.
+ *
+ * Vertical icon+label nav. Click sets shell.navView OR shell.groupId. No
+ * router push in Phase 1.
  */
 
 import {
   Inbox,
-  FileText,
-  Layers,
-  HelpCircle,
   Users,
+  Calendar,
+  UserCheck,
+  UserPlus2,
+  MessageSquare,
+  Trash2,
   ShieldAlert,
-  Send,
-  FileEdit,
-  Settings,
+  Tag,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { NavView, ViewBadge } from "@/mock/types";
+import { NAV_VIEW_ORDER, type Group, type NavView, type ViewBadge } from "@/mock/types";
 import { NAV_VIEW_LABEL } from "@/mock/inbox2";
 
 const NAV_ICON: Record<NavView, LucideIcon> = {
-  "all": Inbox,
-  "by-file": FileText,
-  "multi-file": Layers,
-  "unassigned": HelpCircle,
-  "team": Users,
+  "inbox": Inbox,
+  "team-inboxes": Users,
+  "calendars": Calendar,
+  "assigned-me": UserCheck,
+  "assigned-others": UserPlus2,
+  "comments": MessageSquare,
+  "trash": Trash2,
   "spam": ShieldAlert,
-  "sent": Send,
-  "drafts": FileEdit,
-  "settings": Settings,
 };
-
-const PRIMARY_ORDER: readonly NavView[] = [
-  "all",
-  "by-file",
-  "multi-file",
-  "unassigned",
-  "team",
-  "spam",
-  "sent",
-  "drafts",
-] as const;
 
 type Props = {
   navView: NavView;
@@ -58,14 +51,33 @@ type Props = {
    * otherwise neutral badge with `total`.
    */
   badges?: Partial<Record<NavView, ViewBadge>>;
+  groups: Group[];
+  groupId: Group["id"];
+  onGroupChange: (next: Group["id"]) => void;
+  groupBadges?: Partial<Record<Group["id"], ViewBadge>>;
 };
 
-export function Inbox2NavRail({ navView, onChange, badges }: Props) {
-  function handleClick(next: NavView) {
+export function Inbox2NavRail({
+  navView,
+  onChange,
+  badges,
+  groups,
+  groupId,
+  onGroupChange,
+  groupBadges,
+}: Props) {
+  function handleViewClick(next: NavView) {
     if (next === navView) return;
     // eslint-disable-next-line no-console
-    console.log("[stub] inbox2-nav-rail click", { from: navView, to: next });
+    console.log("[stub] inbox2-nav-rail view click", { from: navView, to: next });
     onChange(next);
+  }
+
+  function handleGroupClick(next: Group["id"]) {
+    if (next === groupId) return;
+    // eslint-disable-next-line no-console
+    console.log("[stub] inbox2-nav-rail group click", { from: groupId, to: next });
+    onGroupChange(next);
   }
 
   return (
@@ -73,37 +85,53 @@ export function Inbox2NavRail({ navView, onChange, badges }: Props) {
       aria-label="Inbox views"
       className="h-full w-full shrink-0 bg-muted/20 px-2 py-3 flex flex-col gap-0.5 overflow-y-auto"
     >
-      {PRIMARY_ORDER.map((v) => (
-        <NavButton
+      {NAV_VIEW_ORDER.map((v) => (
+        <NavItem
           key={v}
-          view={v}
+          icon={NAV_ICON[v]}
+          label={NAV_VIEW_LABEL[v]}
           active={navView === v}
-          onClick={() => handleClick(v)}
+          onClick={() => handleViewClick(v)}
           badge={badges?.[v]}
         />
       ))}
-      <div className="my-2 border-t" />
-      <NavButton
-        view="settings"
-        active={navView === "settings"}
-        onClick={() => handleClick("settings")}
-      />
+
+      <SectionHeader>Custom Groups</SectionHeader>
+      {groups.map((g) => (
+        <NavItem
+          key={g.id}
+          icon={Tag}
+          label={g.name}
+          active={groupId === g.id}
+          onClick={() => handleGroupClick(g.id)}
+          badge={groupBadges?.[g.id]}
+        />
+      ))}
     </nav>
   );
 }
 
-function NavButton({
-  view,
+function SectionHeader({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="mt-3 mb-1 px-2.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/70">
+      {children}
+    </div>
+  );
+}
+
+function NavItem({
+  icon: Icon,
+  label,
   active,
   onClick,
   badge,
 }: {
-  view: NavView;
+  icon: LucideIcon;
+  label: string;
   active: boolean;
   onClick: () => void;
   badge?: ViewBadge;
 }) {
-  const Icon = NAV_ICON[view];
   const isUrgent = (badge?.urgent ?? 0) > 0;
   const count = isUrgent ? badge!.urgent : badge?.total ?? 0;
   return (
@@ -119,7 +147,7 @@ function NavButton({
       )}
     >
       <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden />
-      <span className="flex-1 truncate">{NAV_VIEW_LABEL[view]}</span>
+      <span className="flex-1 truncate">{label}</span>
       {count > 0 ? (
         <span
           className={cn(

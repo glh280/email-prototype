@@ -31,6 +31,7 @@ import {
   DEFAULT_NAV_VIEW,
   MOCK_NOTIFICATION_BADGE,
   NAV_VIEW_BADGES,
+  GROUP_BADGES,
 } from "@/mock/inbox2";
 
 export default async function Inbox2Page() {
@@ -51,6 +52,7 @@ export default async function Inbox2Page() {
         defaultNavView={DEFAULT_NAV_VIEW}
         notificationBadge={MOCK_NOTIFICATION_BADGE}
         navViewBadges={NAV_VIEW_BADGES}
+        groupBadges={GROUP_BADGES}
       />
     </>
   );
