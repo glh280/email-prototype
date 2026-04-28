@@ -16,11 +16,18 @@
  *   - No SSE — static render
  */
 
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { AppHeader } from "@/components/app-header";
+import { INBOX_VIEW_COOKIE_NAME } from "@/lib/inbox-view-cookie";
 import { InboxSurface } from "./_components/inbox-surface";
 import { INBOX_ROWS, unreadCountsByTab, DEFAULT_FROM_MAILBOX } from "@/mock/inbox";
 
-export default function InboxPage() {
+export default async function InboxPage() {
+  const cookieStore = await cookies();
+  const view = cookieStore.get(INBOX_VIEW_COOKIE_NAME)?.value;
+  if (view === "workspace") redirect("/inbox2");
+
   const allRows = INBOX_ROWS;
   const unreadCounts = unreadCountsByTab(allRows);
 

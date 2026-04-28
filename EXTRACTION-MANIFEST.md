@@ -1,88 +1,94 @@
 # Extraction Manifest — Email Prototype
 
-Maps every prototype file to its NPR_Dashboard source for reintegration. See [docs/superpowers/specs/2026-04-27-email-prototype-design.md](docs/superpowers/specs/2026-04-27-email-prototype-design.md) for the layered design rationale.
+Per-file source-tracking for reintegration. Spec: [docs/superpowers/specs/2026-04-27-email-prototype-design.md](docs/superpowers/specs/2026-04-27-email-prototype-design.md).
 
-## Source SHAs (frozen at L1 bootstrap)
+**Bootstrap SHAs** (frozen at L1; refresh before reintegration):
+- Shell: `glh280/npr-dashboard-prototype` `design-reference/prototype` @ `e4afe73d`
+- Inbox: `glh280/npr-dashboard-prototype` `master` @ `a7a31d9b`
 
-- **UI shell:** `glh280/npr-dashboard-prototype` branch `design-reference/prototype` @ commit `e4afe73d`
-- **Inbox components:** `glh280/npr-dashboard-prototype` branch `master` @ commit `a7a31d9b`
+**Status:** `verbatim` byte-identical · `stripped-server-actions` action imports/handlers removed · `stubbed` behavior replaced · `modified` UI iterated beyond source · `new` no PROD source.
 
-When PROD drift accumulates, refresh these SHAs and diff each `verbatim`/`stripped-server-actions` row against the new HEAD before reintegrating.
+## Foundation
 
-## Status legend
-
-| Status | Meaning |
-|---|---|
-| `verbatim` | Byte-identical to source |
-| `stripped-server-actions` | Server-action imports + handlers removed; UI props now plain values + callbacks |
-| `stubbed` | Behavior replaced (e.g., Send button toasts instead of calling action) |
-| `modified` | UI/UX iteration changed component beyond source |
-| `new` | Has no PROD source — written for L1 (e.g., mock fixtures) |
-
-## File map
-
-### Foundation
-
-| Prototype path | Source path | Source SHA | Status | Notes |
+| Prototype path | Source | SHA | Status | Notes |
 |---|---|---|---|---|
-| `mock/types.ts` (email types section) | `db/schema/email-types.ts` + `lib/email-query.ts` (InboxRow shape) + `lib/filter-params.ts` (InboxTab) | `a7a31d9b` | new | TS-only types; Drizzle imports stripped |
-| `mock/inbox.ts` | (no PROD source — fixtures replace `queryInboxForUser`) | — | new | L1 hardcoded data |
-| `.env.local` | `.env.example` (template) | `a7a31d9b` | stubbed | DB + CF Access values are stubs (inert in L1) |
-| `components/ui/tooltip.tsx` | `components/ui/tooltip.tsx` | `a7a31d9b` | verbatim | base-ui wrapper |
-| `components/inbox-header-button.tsx` | `components/inbox-header-button.tsx` | `a7a31d9b` | stubbed | UnreadBadge inlined (chat surface not ported) |
-| `components/app-header.tsx` | (extends prototype-branch existing file) | `e4afe73d` | modified | Added InboxHeaderButton to right cluster |
+| `mock/types.ts` (email types) | `db/schema/email-types.ts` + `lib/email-query.ts` (InboxRow) + `lib/filter-params.ts` (InboxTab) | `a7a31d9b` | modified | Iter: Account, Group, WorkspaceContext, NavView, Inbox2ShellState; InboxRow.accountId/groupId optional |
+| `mock/inbox.ts` | — | — | modified | Iter: each row carries accountId + groupId for /inbox2 scoping |
+| `.env.local` | `.env.example` | `a7a31d9b` | stubbed | Inert stubs |
+| `components/ui/tooltip.tsx` | same | `a7a31d9b` | verbatim | base-ui |
+| `components/inbox-header-button.tsx` | same | `a7a31d9b` | stubbed | UnreadBadge inlined |
+| `components/app-header.tsx` | (extends prototype-branch) | `e4afe73d` | modified | Added InboxHeaderButton |
 
-### Inbox surface
+## Inbox surface
 
-| Prototype path | Source path | Source SHA | Status | Notes |
-|---|---|---|---|---|
-| `app/inbox/page.tsx` | `app/(authenticated)/inbox/page.tsx` | `a7a31d9b` | stripped-server-actions | No CF Access, no DB queries, no URL filter parsing |
-| `app/inbox/_components/inbox-surface.tsx` | `app/(authenticated)/inbox/_components/inbox-surface.tsx` | `a7a31d9b` | stripped-server-actions | URL state → useState; no SSE; no surfaceState machine |
-| `app/inbox/_components/inbox-tab-bar.tsx` | `app/(authenticated)/inbox/_components/inbox-tab-bar.tsx` | `a7a31d9b` | stripped-server-actions | URL push → onTabChange callback |
-| `app/inbox/_components/inbox-search-bar.tsx` | `app/(authenticated)/inbox/_components/inbox-search-bar.tsx` | `a7a31d9b` | stripped-server-actions | URL push → callback props |
-| `app/inbox/_components/inbox-email-list.tsx` | `app/(authenticated)/inbox/_components/inbox-email-list.tsx` | `a7a31d9b` | stripped-server-actions | Types swapped to mock/types; onMarkRead prop chain added |
-| `app/inbox/_components/inbox-empty-state.tsx` | `app/(authenticated)/inbox/_components/inbox-empty-state.tsx` | `a7a31d9b` | verbatim | Per-tab tailored copy from UI-SPEC |
-| `app/inbox/_components/priority-chip.tsx` | `app/(authenticated)/inbox/_components/priority-chip.tsx` | `a7a31d9b` | verbatim | — |
-| `app/inbox/_components/multi-file-candidate-chip.tsx` | `app/(authenticated)/inbox/_components/multi-file-candidate-chip.tsx` | `a7a31d9b` | new | L1 written from spec; PROD source not read in detail |
-| `app/inbox/_components/unassigned-suggestion-pill.tsx` | `app/(authenticated)/inbox/_components/unassigned-suggestion-pill.tsx` | `a7a31d9b` | new | L1 written from spec; PROD source not read in detail |
+All under `app/inbox/_components/` ← `app/(authenticated)/inbox/_components/` @ `a7a31d9b`:
 
-### Row components
+| File | Status | Notes |
+|---|---|---|
+| `../page.tsx` | modified | Iter: read npr-inbox-view cookie + redirect to /inbox2 when set |
+| `inbox-surface.tsx` | modified | Iter: mounts <InboxViewToggle> next to <h1> |
+| `inbox-tab-bar.tsx` | stripped-server-actions | URL push → onTabChange |
+| `inbox-search-bar.tsx` | stripped-server-actions | URL push → callback props |
+| `inbox-email-list.tsx` | stripped-server-actions | Types → mock/types; onMarkRead prop chain |
+| `inbox-empty-state.tsx` | verbatim | — |
+| `priority-chip.tsx` | verbatim | — |
+| `multi-file-candidate-chip.tsx` | new | Written from spec |
+| `unassigned-suggestion-pill.tsx` | new | Written from spec |
 
-| Prototype path | Source path | Source SHA | Status | Notes |
-|---|---|---|---|---|
-| `app/inbox/_components/inbox-row-all.tsx` | `app/(authenticated)/inbox/_components/inbox-row-all.tsx` | `a7a31d9b` | stripped-server-actions | `markThreadRead` → local useState; chat-coupled UnreadBadge inlined |
-| `app/inbox/_components/inbox-row-byfile.tsx` | `app/(authenticated)/inbox/_components/inbox-row-byfile.tsx` | `a7a31d9b` | stripped-server-actions | onMarkRead prop chain |
-| `app/inbox/_components/inbox-row-multi-file.tsx` | `app/(authenticated)/inbox/_components/inbox-row-multi-file.tsx` | `a7a31d9b` | stubbed | Confirm = no-op + console.log + alert |
-| `app/inbox/_components/inbox-row-unassigned.tsx` | `app/(authenticated)/inbox/_components/inbox-row-unassigned.tsx` | `a7a31d9b` | stubbed | Confirm = no-op; Add-to-File opens dialog |
-| `app/inbox/_components/inbox-row-team.tsx` | `app/(authenticated)/inbox/_components/inbox-row-team.tsx` | `a7a31d9b` | verbatim | Delegates to InboxRowAll |
-| `app/inbox/_components/inbox-row-spam.tsx` | `app/(authenticated)/inbox/_components/inbox-row-spam.tsx` | `a7a31d9b` | stripped-server-actions | No mark-read in PROD spam path either |
+## Row components (`app/inbox/_components/`)
 
-### Dialogs
+| File | Status | Notes |
+|---|---|---|
+| `inbox-row-all.tsx` | stripped-server-actions | markThreadRead → useState; UnreadBadge inlined |
+| `inbox-row-byfile.tsx` | stripped-server-actions | onMarkRead chain |
+| `inbox-row-multi-file.tsx` | stubbed | Confirm = no-op + console.log + alert |
+| `inbox-row-unassigned.tsx` | stubbed | Confirm = no-op; Add-to-File opens dialog |
+| `inbox-row-team.tsx` | verbatim | Delegates to InboxRowAll |
+| `inbox-row-spam.tsx` | stripped-server-actions | No mark-read in PROD spam path |
 
-| Prototype path | Source path | Source SHA | Status | Notes |
-|---|---|---|---|---|
-| `app/inbox/_components/inbox-digest-button.tsx` | `app/(authenticated)/inbox/_components/inbox-digest-button.tsx` | `a7a31d9b` | stripped-server-actions | Opens panel only |
-| `app/inbox/_components/inbox-digest-panel.tsx` | `app/(authenticated)/inbox/_components/inbox-digest-panel.tsx` | `a7a31d9b` | stripped-server-actions | Reads MOCK_DIGEST instead of `getDigestForUser` |
-| `app/inbox/_components/inbox-compose-button.tsx` | `app/(authenticated)/inbox/_components/inbox-compose-button.tsx` | `a7a31d9b` | verbatim | — |
-| `app/inbox/_components/inbox-compose-dialog.tsx` | `app/(authenticated)/inbox/_components/inbox-compose-dialog.tsx` | `a7a31d9b` | stubbed | Send → toast "Sent (stub)" |
-| `app/inbox/_components/add-thread-to-deal-dialog.tsx` | `app/(authenticated)/inbox/_components/add-thread-to-deal-dialog.tsx` | `a7a31d9b` | stubbed | **Primary dead call** per spec — Confirm = no-op |
+## Dialogs (`app/inbox/_components/`)
 
-### NOT ported (drop list)
+| File | Status | Notes |
+|---|---|---|
+| `inbox-digest-button.tsx` | stripped-server-actions | Opens panel only |
+| `inbox-digest-panel.tsx` | stripped-server-actions | Reads MOCK_DIGEST |
+| `inbox-compose-button.tsx` | verbatim | — |
+| `inbox-compose-dialog.tsx` | stubbed | Send → toast "Sent (stub)" |
+| `add-thread-to-deal-dialog.tsx` | stubbed | **PRIMARY DEAD CALL** — Confirm = no-op |
 
-These PROD components have no L1 equivalent. Restoration is part of L2+:
+## Inbox2 surface (L1 — new, no PROD source)
+
+Phase 1 of the Workspace shell at `/inbox2`. Toggled from `/inbox` via the
+cookie-persisted `<InboxViewToggle>`. All files net-new for L1.
+
+| File | Status | Notes |
+|---|---|---|
+| `app/inbox2/page.tsx` | new | Reads `npr-inbox-view` cookie + redirects to /inbox when classic |
+| `app/inbox2/_components/inbox2-shell.tsx` | new | Owns `Inbox2ShellState`; lays out top bar / context line / rail / main / preview |
+| `app/inbox2/_components/inbox2-top-bar.tsx` | new | Workspace label, account, group, compose, notifications, avatar |
+| `app/inbox2/_components/inbox2-account-selector.tsx` | new | Stubbed onChange — `inbox2-account-selector change` console.log + toast |
+| `app/inbox2/_components/inbox2-group-selector.tsx` | new | Stubbed onChange — `inbox2-group-selector change` console.log + toast |
+| `app/inbox2/_components/inbox2-context-line.tsx` | new | Workspace · Account · Group · View dot-strip |
+| `app/inbox2/_components/inbox2-nav-rail.tsx` | new | Local navView state; click stubbed to console.log |
+| `app/inbox2/_components/inbox2-sub-header.tsx` | new | Stubbed filter chips + search + Mark all read / Refresh / Sort actions |
+| `app/inbox2/_components/inbox2-message-list.tsx` | new | Filters INBOX_ROWS by accountId + groupId + navView; settings view returns placeholder |
+| `app/inbox2/_components/inbox2-message-row.tsx` | new | Dense single-line row (sender · subject · snippet · time) |
+| `app/inbox2/_components/inbox2-preview-pane.tsx` | new | Placeholder reader card; close stubbed |
+
+| Path | Status | Notes |
+|---|---|---|
+| `mock/inbox2.ts` | new | Accounts, Groups (5 deal tracks), defaults, NAV_VIEW_LABEL, MOCK_NOTIFICATION_COUNT |
+| `components/inbox-view-toggle.tsx` | new | Cookie-persisted segmented control [Classic \| Workspace] |
+| `lib/inbox-view-cookie.ts` | new | Shared cookie name + value union — kept out of the toggle module so server pages can import without crossing the use-client boundary |
+
+## NOT ported (L2+ restoration)
 
 - `inbox/actions.ts` — server actions (markThreadRead, sendEmail, confirmAssociation, getDigestForUser, addThreadToFile)
-- `inbox/_components/use-inbox-stream.ts` — SSE hook
-- `inbox/_components/inbox-gated-banner.tsx` — partner 403 banner (no auth roles in L1)
-- `inbox/_components/inbox-error-state.tsx` — async-fetch error states (no async fetches in L1)
-- `inbox/_components/inbox-loading-state.tsx` — async-fetch loading states
-- `app/_components/chat/unread-badge.tsx` — chat surface dependency (inlined where used)
-- `app/_components/chat/disconnected-banner.tsx` — chat-SSE dependency
+- `inbox/_components/use-inbox-stream.ts` — SSE
+- `inbox/_components/inbox-gated-banner.tsx` — partner 403 (no auth roles in L1)
+- `inbox/_components/inbox-error-state.tsx`, `inbox-loading-state.tsx` — async-fetch states
+- `app/_components/chat/unread-badge.tsx`, `disconnected-banner.tsx` — chat surface deps
 
-### Planned refresh trigger
+## Refresh trigger
 
-Refresh manifest source SHAs when ANY of:
-
-- L2 (DB-backed reads) starts — needs current schema migration set
-- A reintegration session is opened (full re-diff against HEAD)
-- A PROD bug is fixed in a manifested component (cherry-pick into prototype)
+Refresh bootstrap SHAs when: L2 starts · reintegration session opens · PROD bug fixed in a manifested component.

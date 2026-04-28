@@ -61,6 +61,8 @@ const baseRows: InboxRow[] = [
     dealId: "d_elm_st",
     fileNo: "FL-2026-001",
     propertyAddress: "1247 Elm St, Tampa, FL",
+    accountId: "acct-mike",
+    groupId: "grp-title",
   },
   {
     threadId: "t_002",
@@ -81,6 +83,8 @@ const baseRows: InboxRow[] = [
     dealId: "d_rodriguez_refi",
     fileNo: "FL-2026-002",
     propertyAddress: "8829 Pine Ave, Tampa, FL",
+    accountId: "acct-mike",
+    groupId: "grp-lending",
   },
   {
     threadId: "t_003",
@@ -101,6 +105,8 @@ const baseRows: InboxRow[] = [
     dealId: "d_velocity_office",
     fileNo: "FL-2026-003",
     propertyAddress: "510 Velocity Blvd, Atlanta, GA",
+    accountId: "acct-carrie",
+    groupId: "grp-title",
     // Oldest first; UI sorts newest-first on render.
     messages: [
       {
@@ -145,6 +151,8 @@ const baseRows: InboxRow[] = [
     aiSummary: "Pegasus March workshare invoice $3,995 due in 15 days.",
     matchBadge: null,
     isUnread: false,
+    accountId: "acct-mike",
+    groupId: "grp-deal-desk",
   },
   {
     threadId: "t_005",
@@ -165,6 +173,8 @@ const baseRows: InboxRow[] = [
     dealId: "d_palm_way",
     fileNo: "FL-2026-004",
     propertyAddress: "224 Palm Way, Sarasota, FL",
+    accountId: "acct-mike",
+    groupId: "grp-lending",
   },
   {
     threadId: "t_006",
@@ -182,6 +192,8 @@ const baseRows: InboxRow[] = [
     aiSummary: "Mike out through Friday; reroute urgent items to Carrie.",
     matchBadge: null,
     isUnread: false,
+    accountId: "acct-mike",
+    groupId: "grp-consulting",
   },
 ];
 
@@ -226,6 +238,8 @@ const multiFileRows: InboxRow[] = [
     matchBadge: null,
     isUnread: true,
     candidates: multiFileCandidates,
+    accountId: "acct-carrie",
+    groupId: "grp-title",
   },
 ];
 
@@ -259,6 +273,8 @@ const unassignedRows: InboxRow[] = [
     matchBadge: "ai-suggested",
     isUnread: true,
     suggestion: unassignedSuggestion,
+    accountId: "acct-mike",
+    groupId: "grp-lending",
   },
   {
     threadId: "t_un_002",
@@ -277,6 +293,8 @@ const unassignedRows: InboxRow[] = [
     matchBadge: null,
     isUnread: false,
     suggestion: null,
+    accountId: "acct-mike",
+    groupId: "grp-deal-desk",
   },
 ];
 
@@ -301,6 +319,8 @@ const teamRows: InboxRow[] = [
     aiSummary: "Weekly ops sync Monday 9am; standard agenda.",
     matchBadge: null,
     isUnread: true,
+    accountId: "acct-carrie",
+    groupId: "grp-consulting",
   },
   {
     threadId: "t_team_002",
@@ -318,6 +338,8 @@ const teamRows: InboxRow[] = [
     aiSummary: "Memorial Day on-call coverage signup; reply by EOD Friday.",
     matchBadge: null,
     isUnread: false,
+    accountId: "acct-carrie",
+    groupId: "grp-consulting",
   },
 ];
 
@@ -342,6 +364,8 @@ const spamRows: InboxRow[] = [
     aiSummary: null,
     matchBadge: null,
     isUnread: true,
+    accountId: "acct-mike",
+    groupId: "grp-title",
   },
   {
     threadId: "t_spam_002",
@@ -359,6 +383,8 @@ const spamRows: InboxRow[] = [
     aiSummary: null,
     matchBadge: null,
     isUnread: false,
+    accountId: "acct-mike",
+    groupId: "grp-deal-desk",
   },
 ];
 

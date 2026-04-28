@@ -195,6 +195,18 @@ export type LinkedEmail = {
 //     - lib/filter-params.ts        (InboxTab union)
 //     - lib/email-suggestion.ts     (MultiFileCandidate, UnassignedSuggestion)
 //     - db/schema/email-types.ts    (MatchBadgeVariant, EmailMessageLite)
+//
+// 2026-04-27 — /inbox2 Workspace shell (phase 1)
+//   Sources: new (no PROD source — net-new shell)
+//     - Account: connected mailbox identity (model TBD in PROD: likely
+//       `gmail_accounts` row)
+//     - Group: shared inbox / team context with kind discriminator
+//     - WorkspaceContext: active account + group + workspace label
+//     - NavView: extends InboxTab with sent | drafts | settings
+//     - Inbox2ShellState: shell-owned UI state (accountId, groupId,
+//       navView, selectedMessageId)
+//     - InboxRow: extended with optional accountId + groupId so rows can
+//       scope to context
 // (add entries below as iteration extends types)
 
 export type InboxTab = "all" | "by-file" | "multi-file" | "unassigned" | "team" | "spam";
@@ -278,6 +290,11 @@ export type InboxRow = {
   suggestion?: UnassignedSuggestion | null;
   /** Full thread chain shown on expand. Oldest-first; UI sorts newest-first. */
   messages?: EmailMessage[];
+  // /inbox2 shell scoping (phase 1, additive — Classic surface ignores)
+  /** Which connected account this row belongs to. */
+  accountId?: string;
+  /** Which group/team owns this row. */
+  groupId?: string;
 };
 
 export type InboxFilters = {
@@ -354,4 +371,57 @@ export type Deal = {
   linkedGHL?: LinkedGHL[];
   documents?: DealDocument[];
   changeHistory?: ChangeEntry[];
+};
+
+// =============================================================================
+// /inbox2 Workspace shell (L1 — phase 1)
+// =============================================================================
+//
+// See `mock/types.ts` CHANGE LOG entry 2026-04-27 — /inbox2 Workspace shell.
+
+export type Account = {
+  id: string;
+  email: string;
+  displayName: string;
+  avatarUrl?: string;
+};
+
+export type GroupKind = "track" | "team" | "other";
+
+export type Group = {
+  id: string;
+  name: string;
+  kind: GroupKind;
+  /** Set when kind === "track". */
+  track?: Track;
+  memberCount: number;
+  /** Optional unread count if cheap to derive. */
+  unreadCount?: number;
+};
+
+export type WorkspaceContext = {
+  accountId: Account["id"];
+  groupId: Group["id"];
+  workspaceLabel: string;
+};
+
+export type NavView = InboxTab | "sent" | "drafts" | "settings";
+
+export const NAV_VIEW_ORDER: readonly NavView[] = [
+  "all",
+  "by-file",
+  "multi-file",
+  "unassigned",
+  "team",
+  "spam",
+  "sent",
+  "drafts",
+  "settings",
+] as const;
+
+export type Inbox2ShellState = {
+  accountId: Account["id"];
+  groupId: Group["id"];
+  navView: NavView;
+  selectedMessageId: InboxRow["messageId"] | null;
 };

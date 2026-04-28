@@ -28,6 +28,7 @@ import { InboxDigestButton } from "./inbox-digest-button";
 import { InboxComposeButton } from "./inbox-compose-button";
 import { InboxSearchBar } from "./inbox-search-bar";
 import { InboxEmptyState } from "./inbox-empty-state";
+import { InboxViewToggle } from "@/components/inbox-view-toggle";
 
 import {
   type InboxRow,
@@ -103,7 +104,10 @@ export function InboxSurface({
   return (
     <main className="mx-auto w-full max-w-[1440px] px-6 py-6">
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-        <h1 className="text-lg font-semibold">Inbox</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-lg font-semibold">Inbox</h1>
+          <InboxViewToggle />
+        </div>
         <div className="flex items-center gap-2">
           <InboxDigestButton />
           <InboxComposeButton defaultMailbox={defaultMailbox} />
