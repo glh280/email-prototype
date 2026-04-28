@@ -23,7 +23,9 @@ import {
   INBOX_VIEW_COOKIE_NAME,
   INBOX2_PANE_LEFT_COOKIE,
   INBOX2_PANE_CENTER_COOKIE,
+  INBOX2_BY_FILE_EXPANDED_COOKIE,
   parsePaneWidth,
+  parseExpandedFiles,
 } from "@/lib/inbox-view-cookie";
 import { Inbox2Shell } from "./_components/inbox2-shell";
 import { INBOX_ROWS } from "@/mock/inbox";
@@ -47,6 +49,9 @@ export default async function Inbox2Page() {
   const initialCenterW = parsePaneWidth(
     cookieStore.get(INBOX2_PANE_CENTER_COOKIE)?.value,
   );
+  const initialExpandedFiles = parseExpandedFiles(
+    cookieStore.get(INBOX2_BY_FILE_EXPANDED_COOKIE)?.value,
+  );
 
   return (
     <>
@@ -61,6 +66,7 @@ export default async function Inbox2Page() {
         defaultNavView={DEFAULT_NAV_VIEW}
         initialLeftW={initialLeftW}
         initialCenterW={initialCenterW}
+        initialExpandedFiles={Array.from(initialExpandedFiles)}
       />
     </>
   );

@@ -17,7 +17,6 @@
 
 import { Search as SearchIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { toast } from "sonner";
 import { InboxViewToggle } from "@/components/inbox-view-toggle";
 import { InboxComposeButton } from "@/app/inbox/_components/inbox-compose-button";
 import { Inbox2AccountSelector } from "./inbox2-account-selector";
@@ -31,6 +30,14 @@ type Props = {
   onAccountChange: (next: Account["id"]) => void;
   filters: Inbox2Filters;
   onFiltersChange: (next: Inbox2Filters) => void;
+  /**
+   * Controlled top-bar search query. Live filter — every keystroke
+   * updates the message list. Empty string disables the search filter.
+   * See inbox2-shell.tsx::applySearch for the matching contract +
+   * PROD-FTS reintegration plan.
+   */
+  searchQuery: string;
+  onSearchChange: (next: string) => void;
 };
 
 export function Inbox2TopBar({
@@ -39,14 +46,9 @@ export function Inbox2TopBar({
   onAccountChange,
   filters,
   onFiltersChange,
+  searchQuery,
+  onSearchChange,
 }: Props) {
-  function searchSubmit(value: string) {
-    if (!value.trim()) return;
-    // eslint-disable-next-line no-console
-    console.log("[stub] inbox2-top-bar search submit", { q: value });
-    toast(`Search "${value}" — stub (no client filter in Phase 1)`);
-  }
-
   return (
     <header className="border-b bg-background px-4 py-2 flex items-center gap-3 flex-wrap">
       <InboxViewToggle />
@@ -59,11 +61,10 @@ export function Inbox2TopBar({
         />
         <Input
           type="search"
-          placeholder="Search…"
+          placeholder="Search subject, body, AI summary, notes…"
           className="h-8 pl-7 text-xs"
-          onKeyDown={(e) => {
-            if (e.key === "Enter") searchSubmit(e.currentTarget.value);
-          }}
+          value={searchQuery}
+          onChange={(e) => onSearchChange(e.target.value)}
         />
       </div>
       <Inbox2FilterPopover filters={filters} onChange={onFiltersChange} />

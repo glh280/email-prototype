@@ -285,6 +285,19 @@ export type LinkedEmail = {
 //       mock/inbox.ts file stays untouched. L2+ joins
 //       `gmail_message_attachments` rows server-side.
 //
+// 2026-04-28 — NavView FILES section
+//   Sources: extends prior NavView union for inbox2 nav-rail.
+//     - NavView gains "files-by-file" | "files-multi" | "files-unassigned".
+//       Each maps to an existing InboxTab (by-file / multi-file /
+//       unassigned) via NAV_VIEW_TO_INBOX_TAB in mock/inbox2.ts. The
+//       FILES section in the nav rail is the route-to-file triage
+//       surface — reuses the classic surface's per-tab fixtures
+//       (multiFileRows, unassignedRows) and the existing dead-call
+//       dialogs (AddThreadToDealDialog, MultiFileCandidateChip,
+//       UnassignedSuggestionPill). FILES_NAV_VIEWS export drives the
+//       nav-rail rendering split + the shell's account/group-scope
+//       bypass (FILES queues are global triage, not mailbox-scoped).
+//
 // (add entries below as iteration extends types)
 
 export type InboxTab = "all" | "by-file" | "multi-file" | "unassigned" | "team" | "spam";
@@ -519,7 +532,13 @@ export type NavView =
   | "assigned-others"
   | "comments"
   | "trash"
-  | "spam";
+  | "spam"
+  // FILES section — route-to-file surface. Each maps to an existing
+  // InboxTab in mock/inbox2.ts::NAV_VIEW_TO_INBOX_TAB so the classic
+  // surface's per-tab row slices (rowsForTab) drive the inbox2 list.
+  | "files-by-file"
+  | "files-multi"
+  | "files-unassigned";
 
 export const NAV_VIEW_ORDER: readonly NavView[] = [
   "inbox",
@@ -530,6 +549,16 @@ export const NAV_VIEW_ORDER: readonly NavView[] = [
   "comments",
   "trash",
   "spam",
+  "files-by-file",
+  "files-multi",
+  "files-unassigned",
+] as const;
+
+/** NavView ids that render under the "Files" section header. */
+export const FILES_NAV_VIEWS: readonly NavView[] = [
+  "files-by-file",
+  "files-multi",
+  "files-unassigned",
 ] as const;
 
 export type Inbox2ShellState = {

@@ -25,3 +25,28 @@ export function parsePaneWidth(raw: string | undefined): number | null {
   if (!Number.isFinite(n) || n <= 0) return null;
   return n;
 }
+
+/**
+ * Cookie storing which file groups are EXPANDED in the By File view.
+ * Default state is collapsed for every group; this cookie only records
+ * overrides. Comma-separated fileNos.
+ *
+ * "Collapsed" in this view doesn't mean hidden — unread rows always
+ * render so new mail surfaces even in folded groups. Only read rows
+ * collapse away.
+ */
+export const INBOX2_BY_FILE_EXPANDED_COOKIE = "npr-inbox2-by-file-expanded";
+
+export function parseExpandedFiles(raw: string | undefined): Set<string> {
+  if (!raw) return new Set();
+  return new Set(
+    raw
+      .split(",")
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0),
+  );
+}
+
+export function serializeExpandedFiles(set: Set<string>): string {
+  return Array.from(set).join(",");
+}

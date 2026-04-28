@@ -571,6 +571,41 @@ export const DEFAULT_PREFERENCES: Preferences = {
 };
 
 // ---------------------------------------------------------------------------
+// AI Settings — workspace-wide. Admin-only edit. Drives:
+//   - autoMatchSuggestions: file candidate chips + suggestion pills
+//   - autoSummary: aiSummary in preview pane
+//   - prependFileNoToSubject: prepend `[FL-NNN-NNN]` on Reply/Forward
+//     when the source thread has a known fileNo (or operator has a file
+//     selected). Operator must opt out explicitly — warning surface.
+//   - subjectLineLearning: on Confirm of a candidate, log the subject
+//     line as a supplementary association signal. Subject is NEVER a
+//     primary key (otherwise breaks when subject changes); this just
+//     boosts future match confidence for the same subject pattern.
+//
+// Master `enabled` toggle gates every AI behaviour; off = no AI work
+// surfaces. Useful for cost / privacy / debugging stalls.
+//
+// REINTEGRATION: at L2 these land in `workspace_settings.ai` with
+// per-org rows; admin role gate enforced server-side.
+// ---------------------------------------------------------------------------
+
+export type AiSettings = {
+  enabled: boolean;
+  autoMatchSuggestions: boolean;
+  autoSummary: boolean;
+  prependFileNoToSubject: boolean;
+  subjectLineLearning: boolean;
+};
+
+export const DEFAULT_AI_SETTINGS: AiSettings = {
+  enabled: true,
+  autoMatchSuggestions: true,
+  autoSummary: true,
+  prependFileNoToSubject: true,
+  subjectLineLearning: true,
+};
+
+// ---------------------------------------------------------------------------
 // Accounts — connected mailboxes (extends mock/inbox2.ts ACCOUNTS)
 // ---------------------------------------------------------------------------
 

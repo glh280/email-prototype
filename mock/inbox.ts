@@ -112,7 +112,10 @@ const baseRows: InboxRow[] = [
     priorityReason: "Active deal + scheduling request",
     aiSummary: "Buyer agent confirms Friday 10am closing; asking for CTC status.",
     matchBadge: "auto-matched",
-    isUnread: false,
+    // Flipped to unread (2026-04-28) so the FL-2026-003 group exposes
+    // the file-group collapse "always show unread" behaviour — collapse
+    // the group and this thread should still render.
+    isUnread: true,
     dealId: "d_velocity_office",
     fileNo: "FL-2026-003",
     propertyAddress: "510 Velocity Blvd, Atlanta, GA",

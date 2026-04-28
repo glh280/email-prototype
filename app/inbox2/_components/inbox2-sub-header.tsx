@@ -28,21 +28,48 @@ type Props = {
   // and is on the Inbox view, swap the title to that group's name. Other
   // NavViews ignore the group filter so we keep the NavView label.
   groupName: string | null;
+  /**
+   * Selected file number under FILES > By File / Multi-File. When set,
+   * appended to the title as a monospaced sub-label so the operator
+   * always knows the active file filter.
+   */
+  selectedFileNo: string | null;
 };
 
-export function Inbox2SubHeader({ navView, matchCount, groupName }: Props) {
+export function Inbox2SubHeader({
+  navView,
+  matchCount,
+  groupName,
+  selectedFileNo,
+}: Props) {
   function actionClick(action: string) {
     // eslint-disable-next-line no-console
     console.log("[stub] inbox2-sub-header action", { action, navView });
     toast(`${action} — stub (no wire-up in Phase 1)`);
   }
 
-  const title =
-    navView === "inbox" && groupName ? groupName : NAV_VIEW_LABEL[navView];
+  // When a single file is selected under FILES > By File / Multi-File,
+  // the operator wants the file number front-and-centre — no view label,
+  // no group name. Same gesture as Gmail: opening a label hides "Inbox".
+  const fileFocus = selectedFileNo !== null;
+  const title = fileFocus
+    ? selectedFileNo
+    : navView === "inbox" && groupName
+      ? groupName
+      : NAV_VIEW_LABEL[navView];
 
   return (
     <div className="border-b bg-background px-4 py-2 flex items-center gap-2 min-w-0">
-      <h2 className="text-sm font-semibold mr-1 truncate">{title}</h2>
+      <h2
+        className={cn(
+          "mr-1 truncate",
+          fileFocus
+            ? "text-sm font-mono font-semibold tracking-tight"
+            : "text-sm font-semibold",
+        )}
+      >
+        {title}
+      </h2>
       <span className="text-[11px] text-muted-foreground tabular-nums shrink-0">
         {matchCount} {matchCount === 1 ? "thread" : "threads"}
       </span>

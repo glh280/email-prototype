@@ -33,6 +33,7 @@ import { RulesSection } from "./rules";
 import { SignaturesSection } from "./signatures";
 import { PreferencesSection } from "./preferences";
 import { ProfileSection } from "./profile";
+import { AiSection } from "./ai";
 import { PlaceholderSection } from "./placeholder";
 
 type Props = {
@@ -51,6 +52,7 @@ function renderSection(id: SettingsSectionId): React.ReactNode {
     case "rules":         return <RulesSection />;
     case "signatures":    return <SignaturesSection />;
     case "preferences":   return <PreferencesSection />;
+    case "ai":            return <AiSection />;
     default: {
       const label =
         SETTINGS_SECTIONS.find((s) => s.id === id)?.label ?? id;

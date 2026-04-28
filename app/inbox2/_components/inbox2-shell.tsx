@@ -32,14 +32,18 @@ import type {
   TeamNote,
   ViewBadge,
 } from "@/mock/types";
-import { EMPTY_INBOX_FILTERS } from "@/mock/types";
+import { EMPTY_INBOX_FILTERS, FILES_NAV_VIEWS } from "@/mock/types";
 import { rowsForTab } from "@/mock/inbox";
 import {
   ACCOUNT_TO_USER_ID,
   CURRENT_USER_ID,
   DEFAULT_GROUP_ID,
   NAV_VIEW_TO_INBOX_TAB,
+  prependFileNoToSubject,
+  type FileNoSortDir,
 } from "@/mock/inbox2";
+import { getAiSettings } from "@/lib/ai-settings-store";
+import { INBOX2_BY_FILE_EXPANDED_COOKIE } from "@/lib/inbox-view-cookie";
 import { notesForThread, TEAM_NOTES_BY_THREAD } from "@/mock/team-notes";
 import { WORKSPACE_USERS, WORKSPACE_TEAMS } from "@/mock/settings";
 import { toast } from "sonner";
@@ -55,6 +59,67 @@ import {
   type ComposeContext,
 } from "@/app/inbox/_components/inbox-compose-dialog";
 import { DEFAULT_FROM_MAILBOX } from "@/mock/inbox";
+
+/**
+ * Apply the top-bar search input across the row slice.
+ *
+ * Matches case-insensitively against:
+ *   - subject
+ *   - snippet
+ *   - aiSummary
+ *   - per-message body (rendered when expanded; some rows omit it)
+ *   - per-message snippet (collapsed-message preview)
+ *   - team notes attached to the thread (cross-author chatter)
+ *
+ * REINTEGRATION (PROD wire-up):
+ *   This client-side filter exists ONLY to make search testable in L1.
+ *   When Postgres lands, replace `applySearch` with a server-side FTS
+ *   query that joins:
+ *     - emails.subject + emails.body_text + emails.snippet
+ *     - email_thread_ai_summary.summary  (or whatever lib/ai-summary
+ *       writes — currently `aiSummary` on the row)
+ *     - email_thread_notes.body
+ *   See lib/email-query.ts → `queryInboxRowsForUser` for the existing
+ *   row pipeline; the search predicate slots in there. Cloudflare D1
+ *   FTS5 or Postgres tsvector both work — index the four columns above
+ *   in a single tsvector_union and ts_rank_cd the result. Until that
+ *   lands, this helper is the contract: any field that participates in
+ *   the prototype's match must participate in the PROD query, or the
+ *   inbox2 search will silently regress when the surface flips.
+ *
+ * Notes (per-thread) are passed in via a closure parameter to avoid
+ * threading the full notes registry through every list-derivation
+ * dependency. Empty / whitespace-only queries no-op.
+ */
+function applySearch(
+  rows: InboxRow[],
+  query: string,
+  notesByThread: (threadId: string) => TeamNote[],
+): InboxRow[] {
+  const needle = query.trim().toLowerCase();
+  if (!needle) return rows;
+  return rows.filter((r) => {
+    const haystackParts: Array<string | null | undefined> = [
+      r.subject,
+      r.fromName,
+      r.fromAddress,
+      r.snippet,
+      r.aiSummary,
+      r.fileNo,
+      r.propertyAddress,
+    ];
+    if (r.messages) {
+      for (const m of r.messages) {
+        haystackParts.push(m.snippet, m.body);
+      }
+    }
+    for (const note of notesByThread(r.threadId)) {
+      haystackParts.push(note.body);
+    }
+    const haystack = haystackParts.filter(Boolean).join(" ").toLowerCase();
+    return haystack.includes(needle);
+  });
+}
 
 /**
  * Apply top-bar Filter popover state to a row slice. Empty / undefined
@@ -104,6 +169,13 @@ type Props = {
   defaultNavView: NavView;
   initialLeftW: number | null;
   initialCenterW: number | null;
+  /**
+   * File numbers the operator previously expanded in the By File view.
+   * Read from a cookie server-side; persisted on every collapse/expand
+   * client-side. Default state is "all collapsed" — the cookie only
+   * stores overrides.
+   */
+  initialExpandedFiles: string[];
 };
 
 export function Inbox2Shell({
@@ -115,6 +187,7 @@ export function Inbox2Shell({
   defaultNavView,
   initialLeftW,
   initialCenterW,
+  initialExpandedFiles,
 }: Props) {
   const [state, setState] = useState<Inbox2ShellState>({
     accountId: defaultAccountId,
@@ -131,15 +204,94 @@ export function Inbox2Shell({
     undefined,
   );
 
+  // Live top-bar search query. Empty string = no filter applied. Mirrors
+  // the classic surface's `q` state in inbox-surface.tsx; replaced by a
+  // URL search-param + server FTS query at L2 (see applySearch comment).
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Custom-group state (additive on top of the static GROUPS fixture):
+  //   - customGroups: groups the operator created via the nav-rail "+"
+  //     button. Persisted in component state only (refresh resets); a
+  //     localStorage layer can be added at L1.5 mirroring the cookie
+  //     approach used for pane widths.
+  //   - hiddenGroupIds: groups un-checked in the nav-rail "..." filter
+  //     dropdown. Hidden from the rail but still queryable; the filter
+  //     dropdown lists ALL groups (visible + hidden) so the operator
+  //     can re-show.
+  const [customGroups, setCustomGroups] = useState<Group[]>([]);
+  const [hiddenGroupIds, setHiddenGroupIds] = useState<Set<string>>(
+    () => new Set(),
+  );
+
+  // Selected file number for the FILES > By File / Multi-File nav-rail
+  // dropdowns. Null = no file selected (show all rows in the tab). Set
+  // by the nav rail when a file-number sub-item is clicked. Cleared when
+  // the operator clicks the parent FILES nav item or switches view.
+  const [selectedFileNo, setSelectedFileNo] = useState<string | null>(null);
+
+  // FILES sort direction. Lifted from the nav-rail so the rail's file-
+  // number dropdown AND the center-pane "By File" group order stay in
+  // sync — flipping one updates both surfaces.
+  const [byFileSort, setByFileSort] = useState<FileNoSortDir>("newest");
+  const [multiFileSort, setMultiFileSort] = useState<FileNoSortDir>("newest");
+
+  // Expanded file groups in the By File view. Default is empty (every
+  // group collapsed). Cookie hydration on initial mount; flipping a
+  // group writes the cookie immediately so the next reload remembers.
+  const [expandedFiles, setExpandedFiles] = useState<Set<string>>(
+    () => new Set(initialExpandedFiles),
+  );
+
+  function toggleFileExpanded(fileNo: string) {
+    setExpandedFiles((prev) => {
+      const next = new Set(prev);
+      if (next.has(fileNo)) next.delete(fileNo);
+      else next.add(fileNo);
+      // Persist immediately. Document-cookie write is fine for the
+      // prototype — same surface as inbox-view-toggle uses for the
+      // classic/workspace cookie. 365-day expiry mirrors pane widths.
+      if (typeof document !== "undefined") {
+        const value = Array.from(next).join(",");
+        document.cookie = `${INBOX2_BY_FILE_EXPANDED_COOKIE}=${encodeURIComponent(
+          value,
+        )}; path=/; max-age=${365 * 24 * 3600}; samesite=lax`;
+      }
+      return next;
+    });
+  }
+
   function openCompose(ctx?: ComposeContext) {
     // Default the From mailbox to whichever account is selected in the
     // top-bar dropdown — so Reply / Reply-all / Forward open with the
     // operator's active mailbox, not the global DEFAULT_FROM_MAILBOX.
     const selectedAccount = accounts.find((a) => a.id === state.accountId);
+
+    // Auto-prepend the file number to the outbound subject when:
+    //   - AI master + prependFileNoToSubject are both on
+    //   - The source thread (or active file filter) has a known fileNo
+    //   - The subject doesn't already carry a tag
+    // See mock/inbox2.ts::prependFileNoToSubject for the no-duplicate
+    // contract. AI settings live in lib/ai-settings-store.ts.
+    const ai = getAiSettings();
+    const sourceRow = state.selectedMessageId
+      ? rows.find((r) => r.messageId === state.selectedMessageId)
+      : null;
+    const fileNoForOutbound =
+      sourceRow?.fileNo ?? selectedFileNo ?? null;
+    const shouldPrepend =
+      ai.enabled &&
+      ai.prependFileNoToSubject &&
+      Boolean(fileNoForOutbound) &&
+      ctx?.mode !== "new";
+    const subject = shouldPrepend
+      ? prependFileNoToSubject(fileNoForOutbound, ctx?.subject)
+      : ctx?.subject;
+
     const merged: ComposeContext = {
       mode: ctx?.mode ?? "new",
       ...ctx,
       from: ctx?.from ?? selectedAccount?.email,
+      subject,
     };
     setComposeContext(merged);
     setComposeOpen(true);
@@ -185,6 +337,46 @@ export function Inbox2Shell({
 
   function notesForCurrentThread(threadId: string): TeamNote[] {
     return [...notesForThread(threadId), ...(noteOverrides[threadId] ?? [])];
+  }
+
+  // Combined groups list (static + operator-created). NavRail receives
+  // `visibleGroups` for rendering and `allGroups` for the "..." filter
+  // dropdown so hidden groups can be re-shown.
+  const allGroups = useMemo(() => [...groups, ...customGroups], [
+    groups,
+    customGroups,
+  ]);
+  const visibleGroups = useMemo(
+    () => allGroups.filter((g) => !hiddenGroupIds.has(g.id)),
+    [allGroups, hiddenGroupIds],
+  );
+
+  function onCreateGroup() {
+    // L1: prompt() is the cheapest possible name input. Replace with a
+    // real dialog at L1.5 if operator wants colour / track / member
+    // assignment up-front. For now, every custom group is `kind: "other"`
+    // — track-typed groups (Title / Lending / etc.) are static fixtures.
+    const raw =
+      typeof window === "undefined" ? null : window.prompt("Custom group name");
+    const name = raw?.trim();
+    if (!name) return;
+    const id = `grp-custom-${Date.now().toString(36)}-${Math.random()
+      .toString(36)
+      .slice(2, 6)}`;
+    const next: Group = { id, name, kind: "other", memberCount: 0 };
+    setCustomGroups((prev) => [...prev, next]);
+    // eslint-disable-next-line no-console
+    console.log("[stub-state] inbox2-shell create-group", next);
+    toast.success(`Group "${name}" created`);
+  }
+
+  function onToggleGroupHidden(id: string) {
+    setHiddenGroupIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   }
 
   function addNote(threadId: string, body: string, mentions: NoteMention[]) {
@@ -336,15 +528,42 @@ export function Inbox2Shell({
         deduped.push(r);
       }
       const overridden = applyOverrides(deduped);
-      return applyFilters(overridden, state.filters);
+      const filtered = applyFilters(overridden, state.filters);
+      return applySearch(filtered, searchQuery, notesForCurrentThread);
     }
     const tab = NAV_VIEW_TO_INBOX_TAB[state.navView];
     if (!tab) return [];
-    const base = rowsForTab(tab).filter(
-      (r) => r.accountId === state.accountId && r.groupId === state.groupId,
+    // FILES section views (by-file / multi-file / unassigned) are triage
+    // queues — global on purpose. Skipping the account+group scope means
+    // the operator sees every candidate file, not just rows in their
+    // active mailbox/group. Standard nav views (inbox / spam) keep the
+    // scope so the rail's selected mailbox/group still drives the list.
+    const isFilesView = (FILES_NAV_VIEWS as readonly NavView[]).includes(
+      state.navView,
     );
+    let base = isFilesView
+      ? rowsForTab(tab)
+      : rowsForTab(tab).filter(
+          (r) => r.accountId === state.accountId && r.groupId === state.groupId,
+        );
+    // FILES dropdowns: when a specific file number is selected under
+    // "By File" or "Multi-File", narrow to rows touching that file.
+    //   - by-file: row.fileNo must match.
+    //   - multi-file: any candidate.fileNo must match (or row.fileNo).
+    if (isFilesView && selectedFileNo) {
+      if (state.navView === "files-by-file") {
+        base = base.filter((r) => r.fileNo === selectedFileNo);
+      } else if (state.navView === "files-multi") {
+        base = base.filter(
+          (r) =>
+            r.fileNo === selectedFileNo ||
+            r.candidates?.some((c) => c.fileNo === selectedFileNo),
+        );
+      }
+    }
     const overridden = applyOverrides(base);
-    return applyFilters(overridden, state.filters);
+    const filtered = applyFilters(overridden, state.filters);
+    return applySearch(filtered, searchQuery, notesForCurrentThread);
   }, [
     state.navView,
     state.accountId,
@@ -352,6 +571,9 @@ export function Inbox2Shell({
     state.filters,
     applyOverrides,
     mentionedThreadIds,
+    searchQuery,
+    noteOverrides,
+    selectedFileNo,
   ]);
 
   const matchCount = currentTabRows.length;
@@ -376,27 +598,38 @@ export function Inbox2Shell({
     const spamRows = applyOverrides(rowsForTab("spam")).filter(
       (r) => r.accountId === state.accountId && r.groupId === state.groupId,
     );
+    // FILES badges are global (cross-account / cross-group) to match the
+    // currentTabRows derivation above. Triage queues should reflect the
+    // total work waiting, not just the selected mailbox's slice.
+    const byFileRows = applyOverrides(rowsForTab("by-file"));
+    const multiFileRows = applyOverrides(rowsForTab("multi-file"));
+    const unassignedRows = applyOverrides(rowsForTab("unassigned"));
     return {
       inbox: badgeFromRows(inboxRows),
       spam: badgeFromRows(spamRows),
       comments: commentsBadge,
+      "files-by-file": badgeFromRows(byFileRows),
+      "files-multi": badgeFromRows(multiFileRows),
+      "files-unassigned": badgeFromRows(unassignedRows),
     };
   }, [state.accountId, state.groupId, applyOverrides, commentsBadge]);
 
   // Per-group badge: unread inbox rows in the current account, scoped to
-  // each group. Switching account updates all group counts.
+  // each group. Switching account updates all group counts. Custom
+  // (operator-created) groups have no rows in L1 fixtures, so their
+  // badges stay empty — no special-case needed.
   const groupBadges = useMemo<Partial<Record<Group["id"], ViewBadge>>>(() => {
     const accountRows = applyOverrides(rowsForTab("all")).filter(
       (r) => r.accountId === state.accountId,
     );
     const out: Partial<Record<Group["id"], ViewBadge>> = {};
-    for (const g of groups) {
+    for (const g of allGroups) {
       const slice = accountRows.filter((r) => r.groupId === g.id);
       const badge = badgeFromRows(slice);
       if (badge) out[g.id] = badge;
     }
     return out;
-  }, [groups, state.accountId, applyOverrides]);
+  }, [allGroups, state.accountId, applyOverrides]);
 
 
   function onSelect(messageId: string) {
@@ -422,9 +655,26 @@ export function Inbox2Shell({
       <Inbox2TopBar
         accounts={accounts}
         accountId={state.accountId}
-        onAccountChange={(id) => patch({ accountId: id, selectedMessageId: null })}
+        onAccountChange={(id) => {
+          // Account switch is a "go home" gesture — drop any FILES
+          // filter so the operator lands in the new mailbox's inbox
+          // instead of an empty FILES view.
+          if ((FILES_NAV_VIEWS as readonly NavView[]).includes(state.navView)) {
+            setSelectedFileNo(null);
+          }
+          setState((s) => ({
+            ...s,
+            accountId: id,
+            navView: (FILES_NAV_VIEWS as readonly NavView[]).includes(s.navView)
+              ? "inbox"
+              : s.navView,
+            selectedMessageId: null,
+          }));
+        }}
         filters={state.filters}
         onFiltersChange={(next) => patch({ filters: next, selectedMessageId: null })}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
       />
       <Inbox2ResizableBody
         initialLeftW={initialLeftW}
@@ -432,7 +682,16 @@ export function Inbox2Shell({
         left={
           <Inbox2NavRail
             navView={state.navView}
-            onChange={(v) =>
+            onChange={(v) => {
+              // Drop any FILES file-number filter on every nav-view
+              // switch. selectedFileNo is sub-state of one specific
+              // FILES view; carrying it across (e.g. By File →
+              // Unassigned with FL-2026-001 still selected) would
+              // narrow the new view's rows to zero and look broken.
+              // The file-click path re-sets selectedFileNo after this
+              // handler in the same render (React batches), so
+              // clicking a file under By File still works.
+              setSelectedFileNo(null);
               setState((s) => ({
                 ...s,
                 navView: v,
@@ -442,14 +701,45 @@ export function Inbox2Shell({
                 // operator's mental "back to home" expectation).
                 groupId: v === "inbox" ? DEFAULT_GROUP_ID : s.groupId,
                 selectedMessageId: null,
-              }))
-            }
+              }));
+            }}
             badges={navViewBadges}
-            groups={groups}
+            groups={visibleGroups}
+            allGroups={allGroups}
+            hiddenGroupIds={hiddenGroupIds}
+            onCreateGroup={onCreateGroup}
+            onToggleGroupHidden={onToggleGroupHidden}
             groupId={state.groupId}
-            onGroupChange={(id) => patch({ groupId: id, selectedMessageId: null })}
+            onGroupChange={(id) => {
+              // Custom-group click belongs to the Inbox view conceptually
+              // (groups scope inbox rows). If the operator is on a FILES
+              // view and clicks a group, jump back to Inbox with that
+              // group active and clear any file filter — otherwise the
+              // group click looks broken (no emails load).
+              const inFilesView = (
+                FILES_NAV_VIEWS as readonly NavView[]
+              ).includes(state.navView);
+              if (inFilesView) setSelectedFileNo(null);
+              setState((s) => ({
+                ...s,
+                groupId: id,
+                navView: (FILES_NAV_VIEWS as readonly NavView[]).includes(s.navView)
+                  ? "inbox"
+                  : s.navView,
+                selectedMessageId: null,
+              }));
+            }}
             groupBadges={groupBadges}
             onOpenSettings={() => setSettingsOpen(true)}
+            selectedFileNo={selectedFileNo}
+            onFileNoChange={(next) => {
+              setSelectedFileNo(next);
+              patch({ selectedMessageId: null });
+            }}
+            byFileSort={byFileSort}
+            onByFileSortChange={setByFileSort}
+            multiFileSort={multiFileSort}
+            onMultiFileSortChange={setMultiFileSort}
           />
         }
         center={
@@ -458,8 +748,9 @@ export function Inbox2Shell({
               navView={state.navView}
               matchCount={matchCount}
               groupName={
-                groups.find((g) => g.id === state.groupId)?.name ?? null
+                allGroups.find((g) => g.id === state.groupId)?.name ?? null
               }
+              selectedFileNo={selectedFileNo}
             />
             <div className="flex-1 min-h-0 overflow-hidden">
               <Inbox2MessageList
@@ -470,6 +761,11 @@ export function Inbox2Shell({
                 onToggleUnread={onToggleUnread}
                 onAssign={onAssign}
                 assigneeOverrides={state.assigneeOverrides}
+                selectedFileNo={selectedFileNo}
+                byFileSort={byFileSort}
+                onByFileSortChange={setByFileSort}
+                expandedFiles={expandedFiles}
+                onToggleFileExpanded={toggleFileExpanded}
               />
             </div>
           </>

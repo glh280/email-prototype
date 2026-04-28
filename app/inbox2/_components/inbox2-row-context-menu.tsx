@@ -37,6 +37,13 @@ type Props = {
   effectiveIsUnread: boolean;
   onToggleUnread: (messageId: string, nextUnread: boolean) => void;
   onAssign: (messageId: string, assigneeId: string | null) => void;
+  /**
+   * Open the manual file-association picker (AddThreadToDealDialog —
+   * the primary dead call per PROTOTYPE-DEAD-CALLS.md). Hosted on the
+   * row component so the dialog state lives next to the row that
+   * opened it.
+   */
+  onAddToFile: () => void;
   children: React.ReactNode;
 };
 
@@ -58,6 +65,7 @@ export function Inbox2RowContextMenu({
   effectiveIsUnread,
   onToggleUnread,
   onAssign,
+  onAddToFile,
   children,
 }: Props) {
   function stub(action: string, payload: Record<string, unknown> = {}) {
@@ -111,6 +119,12 @@ export function Inbox2RowContextMenu({
 
         <ContextMenuItem variant="destructive" onClick={() => stub("trash")}>
           Move to trash
+        </ContextMenuItem>
+
+        <ContextMenuSeparator />
+
+        <ContextMenuItem onClick={onAddToFile}>
+          {row.fileNo ? "Change file…" : "Add to file…"}
         </ContextMenuItem>
 
         <ContextMenuSeparator />

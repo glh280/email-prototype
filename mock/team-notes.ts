@@ -53,6 +53,15 @@ export const TEAM_NOTES_BY_THREAD: Record<string, TeamNote[]> = {
       body: "Already covered this on the Tuesday call — no action required from us.",
       createdAt: days(1),
     },
+    {
+      id: "tn_005_2",
+      threadId: "t_005",
+      authorId: "u_jordan",
+      authorName: "Jordan Reyes",
+      body: "@Mike Hutton — quick FYI, wanted to make sure you saw Kenneth's note before you reply.",
+      mentions: [{ kind: "user", id: "u_mike", label: "Mike Hutton" }],
+      createdAt: hours(6),
+    },
   ],
   t_007: [
     {
