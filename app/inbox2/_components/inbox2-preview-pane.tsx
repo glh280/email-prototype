@@ -19,9 +19,27 @@
  *     last); falls back to row.snippet when no thread is populated
  */
 
-import { X, Mail, Paperclip } from "lucide-react";
+import {
+  X,
+  Mail,
+  Paperclip,
+  ArrowRight,
+  UserPlus,
+  Reply,
+  Clock,
+  FileEdit,
+  Flag,
+  Sparkles,
+  type LucideIcon,
+} from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import type { EmailMessage, InboxRow } from "@/mock/types";
+import type {
+  EmailMessage,
+  InboxRow,
+  SuggestedAction,
+  SuggestedActionKind,
+} from "@/mock/types";
 
 type Props = {
   row: InboxRow | null;
@@ -101,7 +119,11 @@ function PreviewContent({ row, onClose }: { row: InboxRow; onClose: () => void }
 
       <div className="flex-1 overflow-auto px-4 py-3 text-xs space-y-3">
         <ContextBubble row={row} />
-        <SummarySnippetGrid aiSummary={row.aiSummary} snippet={row.snippet} />
+        <SummaryActionsGrid
+          aiSummary={row.aiSummary}
+          actions={row.suggestedActions ?? []}
+          messageId={row.messageId}
+        />
 
         <section className="space-y-3 pt-1">
           {messages.map((m) => (
@@ -119,40 +141,45 @@ function PreviewContent({ row, onClose }: { row: InboxRow; onClose: () => void }
 }
 
 function ContextBubble({ row }: { row: InboxRow }) {
-  const items: Array<{ label: string; value: string; mono?: boolean }> = [
-    { label: "Mailbox", value: row.mailboxAddress ?? "—", mono: true },
-    { label: "File", value: row.fileNo ?? "—" },
-    { label: "Property", value: row.propertyAddress ?? "—" },
-  ];
+  // 3-col grid so File sits visually centered between Mailbox (left)
+  // and Property (right-justified). justify-self per cell handles the
+  // alignment without nesting flex containers.
   return (
-    <div className="rounded-lg border bg-muted/30 px-3 py-2 flex items-center gap-x-4 gap-y-1.5 flex-wrap text-[11px]">
-      {items.map((it) => (
-        <span key={it.label} className="inline-flex items-baseline gap-1 min-w-0">
-          <span className="text-[10px] uppercase tracking-wide text-muted-foreground/80">
-            {it.label}
-          </span>
-          <span
-            className={cn(
-              "text-foreground/90 truncate",
-              it.mono && "font-mono text-[10.5px]",
-            )}
-          >
-            {it.value}
-          </span>
+    <div className="rounded-lg border bg-muted/30 px-3 py-2 grid grid-cols-3 items-baseline gap-x-3 text-[11px]">
+      <span className="inline-flex items-baseline gap-1 min-w-0 justify-self-start">
+        <span className="text-[10px] uppercase tracking-wide text-muted-foreground/80">
+          Mailbox
         </span>
-      ))}
+        <span className="text-foreground/90 truncate font-mono text-[10.5px]">
+          {row.mailboxAddress ?? "—"}
+        </span>
+      </span>
+      <span className="inline-flex items-baseline gap-1 min-w-0 justify-self-center">
+        <span className="text-[10px] uppercase tracking-wide text-muted-foreground/80">
+          File
+        </span>
+        <span className="text-foreground/90 truncate">{row.fileNo ?? "—"}</span>
+      </span>
+      <span className="inline-flex items-baseline gap-1 min-w-0 justify-self-end text-right">
+        <span className="text-[10px] uppercase tracking-wide text-muted-foreground/80">
+          Property
+        </span>
+        <span className="text-foreground/90 truncate">{row.propertyAddress ?? "—"}</span>
+      </span>
     </div>
   );
 }
 
-function SummarySnippetGrid({
+function SummaryActionsGrid({
   aiSummary,
-  snippet,
+  actions,
+  messageId,
 }: {
   aiSummary: string | null;
-  snippet: string | null;
+  actions: SuggestedAction[];
+  messageId: string;
 }) {
-  if (!aiSummary && !snippet) return null;
+  if (!aiSummary && actions.length === 0) return null;
   return (
     <div className="grid gap-2 sm:grid-cols-2">
       {aiSummary ? (
@@ -160,11 +187,82 @@ function SummarySnippetGrid({
           {aiSummary}
         </Bubble>
       ) : null}
-      {snippet ? (
-        <Bubble label="Snippet" tone="muted">
-          {snippet}
-        </Bubble>
-      ) : null}
+      <SuggestedActionsBubble actions={actions} messageId={messageId} />
+    </div>
+  );
+}
+
+const ACTION_ICON: Record<SuggestedActionKind, LucideIcon> = {
+  "stage-update": ArrowRight,
+  assign: UserPlus,
+  "reply-template": Reply,
+  "follow-up": Clock,
+  "file-update": FileEdit,
+  flag: Flag,
+};
+
+function SuggestedActionsBubble({
+  actions,
+  messageId,
+}: {
+  actions: SuggestedAction[];
+  messageId: string;
+}) {
+  return (
+    <div className="rounded-lg p-2 border bg-emerald-50 border-emerald-200 dark:bg-emerald-950/30 dark:border-emerald-900">
+      <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1.5 inline-flex items-center gap-1">
+        <Sparkles className="h-3 w-3" aria-hidden />
+        Suggested actions
+      </div>
+      {actions.length === 0 ? (
+        <div className="text-[11px] text-muted-foreground italic">
+          No suggested actions for this message yet.
+        </div>
+      ) : (
+        <ul className="space-y-1">
+          {actions.map((a) => {
+            const Icon = ACTION_ICON[a.kind];
+            return (
+              <li key={a.id}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    // eslint-disable-next-line no-console
+                    console.log("[stub] inbox2-preview-pane suggested-action", {
+                      messageId,
+                      actionId: a.id,
+                      kind: a.kind,
+                    });
+                    toast.message(a.label, {
+                      description: a.hint
+                        ? `${a.hint} — stub`
+                        : "Stub (no wire-up in Phase 1)",
+                    });
+                  }}
+                  className="w-full text-left rounded-md px-1.5 py-1 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors group"
+                >
+                  <div className="flex items-start gap-1.5">
+                    <Icon
+                      className="h-3.5 w-3.5 mt-0.5 shrink-0 text-emerald-700 dark:text-emerald-400"
+                      aria-hidden
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[11.5px] text-foreground/90 leading-snug">
+                        {a.label}
+                      </div>
+                      {a.hint ? (
+                        <div className="text-[10px] text-muted-foreground leading-snug">
+                          {a.hint}
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </div>
   );
 }

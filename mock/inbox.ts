@@ -63,6 +63,11 @@ const baseRows: InboxRow[] = [
     propertyAddress: "1247 Elm St, Tampa, FL",
     accountId: "acct-mike",
     groupId: "grp-title",
+    suggestedActions: [
+      { id: "sa_001_a", kind: "reply-template", label: "Send 'Wire confirmed' template", hint: "→ Bobbie @ LNR, before 2pm" },
+      { id: "sa_001_b", kind: "flag", label: "Flag for compliance — wire change verification", hint: "second-channel call required" },
+      { id: "sa_001_c", kind: "follow-up", label: "Confirm post-disbursement at 3pm", hint: "auto-reminder + slack ping Carrie" },
+    ],
   },
   {
     threadId: "t_002",
@@ -85,6 +90,12 @@ const baseRows: InboxRow[] = [
     propertyAddress: "8829 Pine Ave, Tampa, FL",
     accountId: "acct-mike",
     groupId: "grp-lending",
+    suggestedActions: [
+      { id: "sa_002_a", kind: "reply-template", label: "Send 'Title commitment received' template", hint: "→ Stewart Title" },
+      { id: "sa_002_b", kind: "stage-update", label: "Move FL-2026-002 → 'Title cleared'", hint: "review schedule B-II first" },
+      { id: "sa_002_c", kind: "assign", label: "Assign review to Steff", hint: "Stewart commitments are her area" },
+      { id: "sa_002_d", kind: "follow-up", label: "Follow-up Friday if no clear-to-close", hint: "auto-reminder at 2pm" },
+    ],
   },
   {
     threadId: "t_003",
@@ -175,6 +186,11 @@ const baseRows: InboxRow[] = [
     propertyAddress: "224 Palm Way, Sarasota, FL",
     accountId: "acct-mike",
     groupId: "grp-lending",
+    suggestedActions: [
+      { id: "sa_005_a", kind: "flag", label: "Flag CD borrower-fee discrepancy for Mike review", hint: "page 2 line items" },
+      { id: "sa_005_b", kind: "reply-template", label: "Reply: 'CD received, reviewing'", hint: "→ Loan Depot, EOD ack" },
+      { id: "sa_005_c", kind: "follow-up", label: "Block 30 min today for CD review", hint: "before EOD deadline" },
+    ],
   },
   {
     threadId: "t_006",
@@ -217,6 +233,12 @@ const baseRows: InboxRow[] = [
     propertyAddress: "1247 Elm St, Tampa, FL",
     accountId: "acct-mike",
     groupId: "grp-title",
+    suggestedActions: [
+      { id: "sa_007_a", kind: "reply-template", label: "Reply: 'Affidavit en route'", hint: "asks borrower to swing by EOD tomorrow" },
+      { id: "sa_007_b", kind: "file-update", label: "Add affidavit-of-identity to FL-2026-001 checklist", hint: "blocks recording until signed" },
+      { id: "sa_007_c", kind: "stage-update", label: "Move FL-2026-001 → 'Ready to record'", hint: "after signed PDF received" },
+      { id: "sa_007_d", kind: "follow-up", label: "Follow-up borrower tomorrow 10am", hint: "if affidavit not in by EOD" },
+    ],
     messages: [
       {
         id: "m_007a",
@@ -274,6 +296,12 @@ const baseRows: InboxRow[] = [
     propertyAddress: "8829 Pine Ave, Tampa, FL",
     accountId: "acct-mike",
     groupId: "grp-lending",
+    suggestedActions: [
+      { id: "sa_009_a", kind: "file-update", label: "Add commitment expiry to FL-2026-002 (30d)", hint: "auto-flag at 25d" },
+      { id: "sa_009_b", kind: "stage-update", label: "Move FL-2026-002 → 'Lender packaging'", hint: "appraisal recert + payoff next" },
+      { id: "sa_009_c", kind: "assign", label: "Assign appraisal recert to Carrie", hint: "she owns appraiser relationships" },
+      { id: "sa_009_d", kind: "reply-template", label: "Reply: 'Confirming receipt + next steps'", hint: "→ Velocity Mortgage UW" },
+    ],
   },
   {
     threadId: "t_010",
@@ -296,6 +324,11 @@ const baseRows: InboxRow[] = [
     propertyAddress: "415 Cascade Ridge, Missoula, MT",
     accountId: "acct-mike",
     groupId: "grp-lending",
+    suggestedActions: [
+      { id: "sa_010_a", kind: "file-update", label: "Add UW conditions checklist to MT-2026-012", hint: "3 items: bank stmts, lease, P&L" },
+      { id: "sa_010_b", kind: "reply-template", label: "Reply: 'Acknowledging conditions, will revert by Tue'", hint: "→ Capital Funding UW" },
+      { id: "sa_010_c", kind: "assign", label: "Request 6-mo bank stmts from borrower", hint: "kick to Steff for collection" },
+    ],
   },
   {
     threadId: "t_011",
@@ -794,6 +827,15 @@ export function unreadCountsByTab(rows: InboxRow[] = INBOX_ROWS): Record<InboxTa
 /** Top-of-AppHeader unread badge — sum of internal-relevant tabs (excludes spam). */
 export const MOCK_INBOX_UNREAD_TOTAL = INBOX_ROWS.filter(
   (r) => r.isUnread,
+).length;
+
+/**
+ * AppHeader badge — only HIGH priority + unread. The "17" total was too
+ * noisy; operator should see at-a-glance how many fires are burning, not
+ * inbox depth. Sourced from baseRows only (excludes spam / triage tabs).
+ */
+export const MOCK_INBOX_HIGH_PRIORITY_UNREAD = baseRows.filter(
+  (r) => r.isUnread && r.priorityTier === "HIGH",
 ).length;
 
 // ---------------------------------------------------------------------------

@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { NavLinks } from "@/components/nav-links";
 import { InboxHeaderButton } from "@/components/inbox-header-button";
-import { MOCK_INBOX_UNREAD_TOTAL } from "@/mock/inbox";
+import { MOCK_INBOX_HIGH_PRIORITY_UNREAD } from "@/mock/inbox";
 
 /**
  * Header with the real Cloudflare Access user pulled in at render time.
@@ -56,7 +56,7 @@ export async function AppHeader() {
         <NavLinks />
       </div>
       <div className="flex items-center gap-2">
-        <InboxHeaderButton unreadTotal={MOCK_INBOX_UNREAD_TOTAL} />
+        <InboxHeaderButton highPriorityCount={MOCK_INBOX_HIGH_PRIORITY_UNREAD} />
         <DropdownMenu>
           <DropdownMenuTrigger className="outline-none">
             <Avatar className="h-8 w-8">

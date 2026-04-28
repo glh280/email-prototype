@@ -17,38 +17,27 @@
 
 import { Inbox } from "lucide-react";
 import { Inbox2MessageRow } from "./inbox2-message-row";
-import { rowsForTab } from "@/mock/inbox";
-import type { InboxRow, InboxTab, NavView } from "@/mock/types";
-import { NAV_VIEW_LABEL } from "@/mock/inbox2";
-
-const NAV_VIEW_TO_INBOX_TAB: Partial<Record<NavView, InboxTab>> = {
-  "inbox": "all",
-  "spam": "spam",
-};
+import type { InboxRow, NavView } from "@/mock/types";
+import { NAV_VIEW_LABEL, NAV_VIEW_TO_INBOX_TAB } from "@/mock/inbox2";
 
 type Props = {
-  accountId: string;
-  groupId: string;
   navView: NavView;
+  rows: InboxRow[];
   selectedMessageId: string | null;
   onSelect: (messageId: string) => void;
+  onToggleUnread: (messageId: string, nextUnread: boolean) => void;
 };
 
 export function Inbox2MessageList({
-  accountId,
-  groupId,
   navView,
+  rows,
   selectedMessageId,
   onSelect,
+  onToggleUnread,
 }: Props) {
-  const tab = NAV_VIEW_TO_INBOX_TAB[navView];
-  const baseRows: InboxRow[] = tab ? rowsForTab(tab) : [];
-  const rows = baseRows.filter(
-    (r) => r.accountId === accountId && r.groupId === groupId,
-  );
-
   if (rows.length === 0) {
-    return <EmptyState navView={navView} hasMockedTab={tab !== undefined} />;
+    const hasMockedTab = NAV_VIEW_TO_INBOX_TAB[navView] !== undefined;
+    return <EmptyState navView={navView} hasMockedTab={hasMockedTab} />;
   }
 
   return (
@@ -59,6 +48,7 @@ export function Inbox2MessageList({
           row={r}
           selected={r.messageId === selectedMessageId}
           onSelect={onSelect}
+          onToggleUnread={onToggleUnread}
         />
       ))}
     </ul>

@@ -20,7 +20,7 @@
  * rendered in shell chrome (kept on props for future header reuse).
  */
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type {
   Account,
   Group,
@@ -30,6 +30,7 @@ import type {
   ViewBadge,
 } from "@/mock/types";
 import { rowsForTab } from "@/mock/inbox";
+import { NAV_VIEW_TO_INBOX_TAB } from "@/mock/inbox2";
 import { Inbox2TopBar } from "./inbox2-top-bar";
 import { Inbox2NavRail } from "./inbox2-nav-rail";
 import { Inbox2SubHeader } from "./inbox2-sub-header";
@@ -72,46 +73,84 @@ export function Inbox2Shell({
     groupId: defaultGroupId,
     navView: defaultNavView,
     selectedMessageId: null,
+    unreadOverrides: {},
   });
 
   function patch(partial: Partial<Inbox2ShellState>) {
     setState((s) => ({ ...s, ...partial }));
   }
 
+  // Apply row-level mark-read / mark-unread overrides written by the
+  // right-click context menu. All downstream derivations (badges, list,
+  // matchCount, selectedRow) flow through this so a single toggle updates
+  // every consumer in one render.
+  const applyOverrides = useCallback(
+    (input: InboxRow[]): InboxRow[] => {
+      const ov = state.unreadOverrides;
+      if (Object.keys(ov).length === 0) return input;
+      return input.map((r) =>
+        r.messageId in ov ? { ...r, isUnread: ov[r.messageId] } : r,
+      );
+    },
+    [state.unreadOverrides],
+  );
+
+  function onToggleUnread(messageId: string, nextUnread: boolean) {
+    // eslint-disable-next-line no-console
+    console.log("[stub-state] inbox2-shell toggle-unread", {
+      messageId,
+      nextUnread,
+    });
+    setState((s) => ({
+      ...s,
+      unreadOverrides: { ...s.unreadOverrides, [messageId]: nextUnread },
+    }));
+  }
+
+  // Effective row slice for the current NavView + account + group, with
+  // overrides applied. Single source list passed to the message list and
+  // used for matchCount.
+  const currentTabRows = useMemo<InboxRow[]>(() => {
+    const tab = NAV_VIEW_TO_INBOX_TAB[state.navView];
+    if (!tab) return [];
+    const base = rowsForTab(tab).filter(
+      (r) => r.accountId === state.accountId && r.groupId === state.groupId,
+    );
+    return applyOverrides(base);
+  }, [state.navView, state.accountId, state.groupId, applyOverrides]);
+
+  const matchCount = currentTabRows.length;
+
   const selectedRow = useMemo(
     () =>
       state.selectedMessageId
-        ? rows.find((r) => r.messageId === state.selectedMessageId) ?? null
+        ? applyOverrides(rows).find(
+            (r) => r.messageId === state.selectedMessageId,
+          ) ?? null
         : null,
-    [rows, state.selectedMessageId],
+    [rows, state.selectedMessageId, applyOverrides],
   );
 
-  const matchCount = useMemo(() => {
-    return rows.filter(
-      (r) => r.accountId === state.accountId && r.groupId === state.groupId,
-    ).length;
-  }, [rows, state.accountId, state.groupId]);
-
-  // Live badges derived from real row data + current account/group scope.
-  // Only the `inbox` and `spam` nav views map to mock data today; other
-  // views show no badge (Phase 2+ will populate).
+  // Live badges. Only the `inbox` and `spam` nav views map to mock data
+  // today; other views show no badge (Phase 2+ will populate). Slices
+  // run through applyOverrides so toggling unread instantly reflects.
   const navViewBadges = useMemo<Partial<Record<NavView, ViewBadge>>>(() => {
-    const inboxRows = rowsForTab("all").filter(
+    const inboxRows = applyOverrides(rowsForTab("all")).filter(
       (r) => r.accountId === state.accountId && r.groupId === state.groupId,
     );
-    const spamRows = rowsForTab("spam").filter(
+    const spamRows = applyOverrides(rowsForTab("spam")).filter(
       (r) => r.accountId === state.accountId && r.groupId === state.groupId,
     );
     return {
       inbox: badgeFromRows(inboxRows),
       spam: badgeFromRows(spamRows),
     };
-  }, [state.accountId, state.groupId]);
+  }, [state.accountId, state.groupId, applyOverrides]);
 
   // Per-group badge: unread inbox rows in the current account, scoped to
   // each group. Switching account updates all group counts.
   const groupBadges = useMemo<Partial<Record<Group["id"], ViewBadge>>>(() => {
-    const accountRows = rowsForTab("all").filter(
+    const accountRows = applyOverrides(rowsForTab("all")).filter(
       (r) => r.accountId === state.accountId,
     );
     const out: Partial<Record<Group["id"], ViewBadge>> = {};
@@ -121,20 +160,21 @@ export function Inbox2Shell({
       if (badge) out[g.id] = badge;
     }
     return out;
-  }, [groups, state.accountId]);
+  }, [groups, state.accountId, applyOverrides]);
 
-  // Bell badge: total unread for the current account (across all groups).
-  const notificationBadge = useMemo<ViewBadge>(() => {
-    const all = [...rowsForTab("all"), ...rowsForTab("spam")].filter(
-      (r) => r.accountId === state.accountId,
-    );
-    return badgeFromRows(all) ?? { total: 0, urgent: 0 };
-  }, [state.accountId]);
 
   function onSelect(messageId: string) {
     // eslint-disable-next-line no-console
     console.log("[stub] inbox2-message-row select", { messageId });
-    patch({ selectedMessageId: messageId });
+    // Opening the preview pane marks the row as read — matches every
+    // mainstream email client. Stored as an override so the context-menu
+    // "Mark as unread" affordance can flip it back if the operator
+    // wants to defer action.
+    setState((s) => ({
+      ...s,
+      selectedMessageId: messageId,
+      unreadOverrides: { ...s.unreadOverrides, [messageId]: false },
+    }));
   }
 
   function onPreviewClose() {
@@ -147,7 +187,6 @@ export function Inbox2Shell({
         accounts={accounts}
         accountId={state.accountId}
         onAccountChange={(id) => patch({ accountId: id, selectedMessageId: null })}
-        notificationBadge={notificationBadge}
       />
       <Inbox2ResizableBody
         left={
@@ -163,14 +202,20 @@ export function Inbox2Shell({
         }
         center={
           <>
-            <Inbox2SubHeader navView={state.navView} matchCount={matchCount} />
+            <Inbox2SubHeader
+              navView={state.navView}
+              matchCount={matchCount}
+              groupName={
+                groups.find((g) => g.id === state.groupId)?.name ?? null
+              }
+            />
             <div className="flex-1 min-h-0 overflow-hidden">
               <Inbox2MessageList
-                accountId={state.accountId}
-                groupId={state.groupId}
                 navView={state.navView}
+                rows={currentTabRows}
                 selectedMessageId={state.selectedMessageId}
                 onSelect={onSelect}
+                onToggleUnread={onToggleUnread}
               />
             </div>
           </>

@@ -6,7 +6,7 @@
 // REINTEGRATION: replaced by `queryAccountsForUser` + `queryGroupsForUser`
 //   in L2; this file is deleted at L2 (DB-backed reads).
 
-import type { Account, Group, NavView } from "./types";
+import type { Account, Group, InboxTab, NavView } from "./types";
 
 export const WORKSPACE_LABEL = "NPR Funding";
 
@@ -34,6 +34,16 @@ export const GROUPS: Group[] = [
 export const DEFAULT_ACCOUNT_ID: Account["id"] = "acct-mike";
 export const DEFAULT_GROUP_ID: Group["id"] = "grp-lending";
 export const DEFAULT_NAV_VIEW: NavView = "inbox";
+
+// NavView → backing InboxTab. Only "inbox" + "spam" map to mock data
+// today; other views render an empty state in the message list. This map
+// is the single source of truth for any consumer that needs to count or
+// list rows for the current NavView (sub-header thread count, message
+// list, badges).
+export const NAV_VIEW_TO_INBOX_TAB: Partial<Record<NavView, InboxTab>> = {
+  "inbox": "all",
+  "spam": "spam",
+};
 
 export const NAV_VIEW_LABEL: Record<NavView, string> = {
   "inbox": "Inbox",

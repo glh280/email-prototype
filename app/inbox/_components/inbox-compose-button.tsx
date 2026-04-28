@@ -16,20 +16,26 @@ import { InboxComposeDialog } from "./inbox-compose-dialog";
 
 export function InboxComposeButton({
   defaultMailbox,
+  iconOnly = false,
 }: {
   defaultMailbox: string;
+  // Inbox2 top bar uses the icon-only variant to claw back horizontal
+  // space; classic inbox keeps the labelled CTA.
+  iconOnly?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   return (
     <>
       <Button
-        size="sm"
+        size={iconOnly ? "icon" : "sm"}
         variant="outline"
-        className="gap-1.5"
+        className={iconOnly ? "h-8 w-8" : "gap-1.5"}
         onClick={() => setOpen(true)}
+        aria-label={iconOnly ? "Compose" : undefined}
+        title={iconOnly ? "Compose" : undefined}
       >
         <PenSquare className="h-3.5 w-3.5" />
-        Compose
+        {iconOnly ? null : "Compose"}
       </Button>
       <InboxComposeDialog
         open={open}

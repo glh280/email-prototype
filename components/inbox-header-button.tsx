@@ -15,7 +15,7 @@ import Link from "next/link";
 import { Inbox } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-function InlineUnreadBadge({
+function HighPriorityBadge({
   count,
   className,
 }: {
@@ -26,9 +26,9 @@ function InlineUnreadBadge({
   const display = count > 99 ? "99+" : String(count);
   return (
     <span
-      aria-label={`${count} unread message${count === 1 ? "" : "s"}`}
+      aria-label={`${count} high-priority unread message${count === 1 ? "" : "s"}`}
       className={cn(
-        "inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-semibold leading-none bg-rose-500 text-white",
+        "inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-semibold leading-none bg-rose-500 text-white ring-2 ring-rose-300/50",
         className,
       )}
     >
@@ -37,16 +37,28 @@ function InlineUnreadBadge({
   );
 }
 
-export function InboxHeaderButton({ unreadTotal }: { unreadTotal: number }) {
+export function InboxHeaderButton({
+  highPriorityCount,
+}: {
+  highPriorityCount: number;
+}) {
   return (
     <Link
       href="/inbox"
-      aria-label="Unified inbox"
-      title="Unified inbox"
+      aria-label={
+        highPriorityCount > 0
+          ? `Unified inbox — ${highPriorityCount} high-priority unread`
+          : "Unified inbox"
+      }
+      title={
+        highPriorityCount > 0
+          ? `${highPriorityCount} high-priority unread`
+          : "Unified inbox"
+      }
       className="relative inline-flex items-center justify-center h-9 w-9 rounded-md hover:bg-muted/40 transition-colors"
     >
       <Inbox className="h-4 w-4" />
-      <InlineUnreadBadge count={unreadTotal} className="absolute -top-1 -right-1" />
+      <HighPriorityBadge count={highPriorityCount} className="absolute -top-1 -right-1" />
     </Link>
   );
 }

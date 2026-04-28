@@ -235,6 +235,26 @@ export type LinkedEmail = {
 //     - Group navigation moves from top-bar dropdown into the nav rail's
 //       "Custom groups/teams" section (groupId still owned by
 //       Inbox2ShellState; nav rail clicks call onGroupChange).
+// 2026-04-28 — Inbox2ShellState.unreadOverrides (row context menu)
+//   Sources: new
+//     - unreadOverrides: Record<InboxRow["messageId"], boolean>. Local
+//       L1 mutation layer for the row right-click menu's mark-read /
+//       mark-unread actions. Effective row.isUnread = overrides[id] ??
+//       row.isUnread. Lives on shell state so badge derivation re-runs
+//       on toggle without mutating the mock fixture. L2+ replaces with
+//       a real PATCH against the message store.
+//
+// 2026-04-28 — InboxRow.suggestedActions (preview pane)
+//   Sources: new
+//     - SuggestedAction { id, kind, label, hint? } and SuggestedActionKind.
+//       Replaces the Snippet bubble in the preview pane with a curated
+//       list of next-step affordances ("Move to next stage", "Send wire
+//       confirmation template", "Set follow-up", etc.). L1 stub — clicks
+//       toast. L2+ wires to real automations + ClickUp / GHL surfaces.
+//     - Kinds map to Carrie's "where is this file? whose turn is next?"
+//       core value: stage-update, assign, reply-template, follow-up,
+//       file-update, flag.
+//
 // (add entries below as iteration extends types)
 
 export type InboxTab = "all" | "by-file" | "multi-file" | "unassigned" | "team" | "spam";
@@ -323,6 +343,27 @@ export type InboxRow = {
   accountId?: string;
   /** Which group/team owns this row. */
   groupId?: string;
+  /**
+   * Curated next-step affordances rendered in the /inbox2 preview pane.
+   * See CHANGE LOG entry 2026-04-28 — InboxRow.suggestedActions.
+   */
+  suggestedActions?: SuggestedAction[];
+};
+
+export type SuggestedActionKind =
+  | "stage-update"
+  | "assign"
+  | "reply-template"
+  | "follow-up"
+  | "file-update"
+  | "flag";
+
+export type SuggestedAction = {
+  id: string;
+  kind: SuggestedActionKind;
+  label: string;
+  /** Sub-line context: deadline, assignee, target stage, etc. */
+  hint?: string;
 };
 
 export type InboxFilters = {
@@ -466,6 +507,9 @@ export type Inbox2ShellState = {
   groupId: Group["id"];
   navView: NavView;
   selectedMessageId: InboxRow["messageId"] | null;
+  // Row-level mark-read / mark-unread overrides from the right-click
+  // context menu. Keyed by messageId. See CHANGE LOG entry 2026-04-28.
+  unreadOverrides: Record<InboxRow["messageId"], boolean>;
 };
 
 /**

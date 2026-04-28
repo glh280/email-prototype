@@ -132,8 +132,12 @@ function NavItem({
   onClick: () => void;
   badge?: ViewBadge;
 }) {
+  // Always show TOTAL unread; color signals urgency. Earlier model showed
+  // `urgent` count when urgent>0 (hiding total) — operator misread "2"
+  // as "2 unread" when 4 rows were actually unread. Number now matches
+  // visible bold rows; rose tint means at least one is HIGH priority.
+  const total = badge?.total ?? 0;
   const isUrgent = (badge?.urgent ?? 0) > 0;
-  const count = isUrgent ? badge!.urgent : badge?.total ?? 0;
   return (
     <button
       type="button"
@@ -148,7 +152,7 @@ function NavItem({
     >
       <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden />
       <span className="flex-1 truncate">{label}</span>
-      {count > 0 ? (
+      {total > 0 ? (
         <span
           className={cn(
             "rounded-full px-1.5 py-0.5 text-[10px] font-medium tabular-nums",
@@ -160,11 +164,16 @@ function NavItem({
           )}
           aria-label={
             isUrgent
-              ? `${badge!.urgent} urgent of ${badge!.total}`
-              : `${count} total`
+              ? `${total} unread (${badge!.urgent} high priority)`
+              : `${total} unread`
+          }
+          title={
+            isUrgent
+              ? `${total} unread · ${badge!.urgent} high priority`
+              : `${total} unread`
           }
         >
-          {count}
+          {total}
         </span>
       ) : null}
     </button>

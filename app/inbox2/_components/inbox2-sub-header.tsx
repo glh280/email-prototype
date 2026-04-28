@@ -24,20 +24,25 @@ import { NAV_VIEW_LABEL } from "@/mock/inbox2";
 type Props = {
   navView: NavView;
   matchCount: number;
+  // When the user has selected a custom group (Title / Lending / etc.)
+  // and is on the Inbox view, swap the title to that group's name. Other
+  // NavViews ignore the group filter so we keep the NavView label.
+  groupName: string | null;
 };
 
-export function Inbox2SubHeader({ navView, matchCount }: Props) {
+export function Inbox2SubHeader({ navView, matchCount, groupName }: Props) {
   function actionClick(action: string) {
     // eslint-disable-next-line no-console
     console.log("[stub] inbox2-sub-header action", { action, navView });
     toast(`${action} — stub (no wire-up in Phase 1)`);
   }
 
+  const title =
+    navView === "inbox" && groupName ? groupName : NAV_VIEW_LABEL[navView];
+
   return (
     <div className="border-b bg-background px-4 py-2 flex items-center gap-2 min-w-0">
-      <h2 className="text-sm font-semibold mr-1 truncate">
-        {NAV_VIEW_LABEL[navView]}
-      </h2>
+      <h2 className="text-sm font-semibold mr-1 truncate">{title}</h2>
       <span className="text-[11px] text-muted-foreground tabular-nums shrink-0">
         {matchCount} {matchCount === 1 ? "thread" : "threads"}
       </span>
