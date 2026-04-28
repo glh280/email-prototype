@@ -154,7 +154,11 @@ export type Note = {
 export type EmailMessage = {
   id: string;
   fromName: string;
+  /** Optional sender email — preview pane shows `Name <email>` when present. */
+  fromAddress?: string;
   toNames?: string[]; // optional — "To" recipients shown when expanded
+  ccNames?: string[];
+  bccNames?: string[];
   sentAt: string; // ISO
   /** One-line snippet shown when the message is collapsed. */
   snippet: string;

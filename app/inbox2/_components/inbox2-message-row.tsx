@@ -7,7 +7,11 @@
  * REINTEGRATION: dense Workspace-style row; Phase 2+ adds selection
  *   indicator, hover actions, optimistic mark-read.
  *
- * Single-line dense message row. Sender · Subject · Snippet · Time.
+ * Single-line dense message row. Sender · Subject · [📎] Time.
+ *
+ * Iter (2026-04-27): drop snippet from compact row (preview pane shows
+ * it), shrink sender column to w-24, attachment icon hugs the timestamp
+ * (gap-1) so the eye sees them as a unit.
  */
 
 import { Paperclip } from "lucide-react";
@@ -57,32 +61,27 @@ export function Inbox2MessageRow({ row, selected, onSelect }: Props) {
         />
         <span
           className={cn(
-            "text-xs w-32 shrink-0 truncate",
+            "text-xs w-24 shrink-0 truncate",
             row.isUnread ? "font-semibold text-foreground" : "text-muted-foreground",
           )}
         >
           {row.fromName ?? row.fromAddress}
         </span>
-        <span className="flex-1 min-w-0 flex items-baseline gap-2">
-          <span
-            className={cn(
-              "text-xs truncate",
-              row.isUnread ? "font-semibold text-foreground" : "text-foreground/80",
-            )}
-          >
-            {row.subject ?? "(no subject)"}
-          </span>
-          {row.snippet ? (
-            <span className="text-xs text-muted-foreground truncate hidden md:inline">
-              — {row.snippet}
-            </span>
-          ) : null}
+        <span
+          className={cn(
+            "flex-1 min-w-0 text-xs truncate",
+            row.isUnread ? "font-semibold text-foreground" : "text-foreground/80",
+          )}
+        >
+          {row.subject ?? "(no subject)"}
         </span>
-        {row.hasAttachment ? (
-          <Paperclip className="h-3 w-3 text-muted-foreground shrink-0" aria-label="has attachment" />
-        ) : null}
-        <span className="text-[11px] text-muted-foreground tabular-nums w-12 text-right shrink-0">
-          {formatTime(row.sentAt)}
+        <span className="flex items-center gap-1 shrink-0">
+          {row.hasAttachment ? (
+            <Paperclip className="h-3 w-3 text-muted-foreground" aria-label="has attachment" />
+          ) : null}
+          <span className="text-[11px] text-muted-foreground tabular-nums w-10 text-right">
+            {formatTime(row.sentAt)}
+          </span>
         </span>
       </button>
     </li>

@@ -6,7 +6,7 @@
 // REINTEGRATION: replaced by `queryAccountsForUser` + `queryGroupsForUser`
 //   in L2; this file is deleted at L2 (DB-backed reads).
 
-import type { Account, Group, NavView, ViewBadge } from "./types";
+import type { Account, Group, NavView } from "./types";
 
 export const WORKSPACE_LABEL = "NPR Funding";
 
@@ -44,34 +44,6 @@ export const NAV_VIEW_LABEL: Record<NavView, string> = {
   "comments": "Comments",
   "trash": "Trash",
   "spam": "Spam",
-};
-
-/**
- * Mock unread count for the bell icon in the top bar. Split by urgency
- * so the badge color rule (red for urgent, neutral for normal) has data
- * to work with.
- */
-export const MOCK_NOTIFICATION_BADGE: ViewBadge = { total: 3, urgent: 1 };
-
-/**
- * Per-nav-view badge counts shown in the left rail. Only views with a
- * non-zero count are included. `urgent` drives red highlighting.
- */
-export const NAV_VIEW_BADGES: Partial<Record<NavView, ViewBadge>> = {
-  "inbox":           { total: 7,  urgent: 0 },
-  "assigned-me":     { total: 3,  urgent: 1 },
-  "assigned-others": { total: 5,  urgent: 0 },
-  "comments":        { total: 2,  urgent: 0 },
-  "spam":            { total: 1,  urgent: 0 },
-};
-
-/**
- * Per-group badge counts shown in the left-rail "Custom groups" section.
- * Mirrors NAV_VIEW_BADGES shape so the same urgency rule applies.
- */
-export const GROUP_BADGES: Partial<Record<Group["id"], ViewBadge>> = {
-  "grp-lending": { total: 4, urgent: 1 },
-  "grp-title":   { total: 2, urgent: 0 },
 };
 
 export function findAccount(id: Account["id"]): Account {
