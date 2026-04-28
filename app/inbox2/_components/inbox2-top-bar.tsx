@@ -15,49 +15,36 @@
  * [Classic|Workspace] surface toggle stays at the far left.
  */
 
-import { Filter as FilterIcon, Search as SearchIcon } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Search as SearchIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { InboxViewToggle } from "@/components/inbox-view-toggle";
 import { InboxComposeButton } from "@/app/inbox/_components/inbox-compose-button";
 import { Inbox2AccountSelector } from "./inbox2-account-selector";
+import { Inbox2FilterPopover } from "./inbox2-filter-popover";
 import { DEFAULT_FROM_MAILBOX } from "@/mock/inbox";
-import type { Account } from "@/mock/types";
-
-const FILTER_OPTIONS = [
-  "Unread",
-  "High priority",
-  "Has attachment",
-  "AI flagged",
-  "File-linked",
-] as const;
+import type { Account, Inbox2Filters } from "@/mock/types";
 
 type Props = {
   accounts: Account[];
   accountId: Account["id"];
   onAccountChange: (next: Account["id"]) => void;
+  filters: Inbox2Filters;
+  onFiltersChange: (next: Inbox2Filters) => void;
 };
 
-export function Inbox2TopBar({ accounts, accountId, onAccountChange }: Props) {
+export function Inbox2TopBar({
+  accounts,
+  accountId,
+  onAccountChange,
+  filters,
+  onFiltersChange,
+}: Props) {
   function searchSubmit(value: string) {
     if (!value.trim()) return;
     // eslint-disable-next-line no-console
     console.log("[stub] inbox2-top-bar search submit", { q: value });
     toast(`Search "${value}" — stub (no client filter in Phase 1)`);
-  }
-
-  function filterClick(option: string) {
-    // eslint-disable-next-line no-console
-    console.log("[stub] inbox2-top-bar filter toggle", { option });
-    toast(`Filter "${option}" — stub (no wire-up in Phase 1)`);
   }
 
   return (
@@ -79,31 +66,7 @@ export function Inbox2TopBar({ accounts, accountId, onAccountChange }: Props) {
           }}
         />
       </div>
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          aria-label="Filter"
-          className="inline-flex items-center gap-1 rounded border bg-background px-2 py-1 text-xs hover:bg-muted/50 outline-none"
-        >
-          <FilterIcon className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
-          <span>Filter</span>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="min-w-[180px]">
-          <DropdownMenuLabel className="text-[10px] uppercase tracking-wide text-muted-foreground">
-            Filter
-          </DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          {FILTER_OPTIONS.map((opt) => (
-            <DropdownMenuCheckboxItem
-              key={opt}
-              className="text-xs"
-              checked={false}
-              onCheckedChange={() => filterClick(opt)}
-            >
-              {opt}
-            </DropdownMenuCheckboxItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <Inbox2FilterPopover filters={filters} onChange={onFiltersChange} />
       <div className="flex-1" />
       <Inbox2AccountSelector
         accounts={accounts}

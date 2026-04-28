@@ -24,11 +24,13 @@ import { useCallback, useMemo, useState } from "react";
 import type {
   Account,
   Group,
+  Inbox2Filters,
   Inbox2ShellState,
   InboxRow,
   NavView,
   ViewBadge,
 } from "@/mock/types";
+import { EMPTY_INBOX_FILTERS } from "@/mock/types";
 import { rowsForTab } from "@/mock/inbox";
 import { NAV_VIEW_TO_INBOX_TAB } from "@/mock/inbox2";
 import { Inbox2TopBar } from "./inbox2-top-bar";
@@ -37,6 +39,33 @@ import { Inbox2SubHeader } from "./inbox2-sub-header";
 import { Inbox2MessageList } from "./inbox2-message-list";
 import { Inbox2PreviewPane } from "./inbox2-preview-pane";
 import { Inbox2ResizableBody } from "./inbox2-resizable-body";
+import { SettingsDialog } from "./settings/settings-dialog";
+
+/**
+ * Apply top-bar Filter popover state to a row slice. Empty / undefined
+ * dimensions are ignored. Date range comparisons use sentAt against a
+ * single `now` snapshot — fine for the prototype where rows are static.
+ */
+function applyFilters(rows: InboxRow[], f: Inbox2Filters): InboxRow[] {
+  let out = rows;
+  if (f.unread) out = out.filter((r) => r.isUnread);
+  if (f.highPriority) out = out.filter((r) => r.priorityTier === "HIGH");
+  if (f.hasAttachment) out = out.filter((r) => r.hasAttachment);
+  if (f.fileLinked) out = out.filter((r) => Boolean(r.fileNo));
+  if (f.mailboxes && f.mailboxes.length > 0) {
+    const set = new Set(f.mailboxes);
+    out = out.filter((r) => r.mailboxAddress !== null && set.has(r.mailboxAddress));
+  }
+  if (f.dateRange && f.dateRange !== "all") {
+    const cutoffMs =
+      f.dateRange === "today" ? 24 * 3600e3
+        : f.dateRange === "7d" ? 7 * 24 * 3600e3
+          : 30 * 24 * 3600e3;
+    const cutoff = Date.now() - cutoffMs;
+    out = out.filter((r) => r.sentAt.getTime() >= cutoff);
+  }
+  return out;
+}
 
 /**
  * Build a ViewBadge { total, urgent } from a row slice.
@@ -74,7 +103,9 @@ export function Inbox2Shell({
     navView: defaultNavView,
     selectedMessageId: null,
     unreadOverrides: {},
+    filters: EMPTY_INBOX_FILTERS,
   });
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   function patch(partial: Partial<Inbox2ShellState>) {
     setState((s) => ({ ...s, ...partial }));
@@ -107,17 +138,18 @@ export function Inbox2Shell({
     }));
   }
 
-  // Effective row slice for the current NavView + account + group, with
-  // overrides applied. Single source list passed to the message list and
-  // used for matchCount.
+  // Effective row slice for the current NavView + account + group + active
+  // top-bar filters, with overrides applied. Single source list passed to
+  // the message list and used for matchCount.
   const currentTabRows = useMemo<InboxRow[]>(() => {
     const tab = NAV_VIEW_TO_INBOX_TAB[state.navView];
     if (!tab) return [];
     const base = rowsForTab(tab).filter(
       (r) => r.accountId === state.accountId && r.groupId === state.groupId,
     );
-    return applyOverrides(base);
-  }, [state.navView, state.accountId, state.groupId, applyOverrides]);
+    const overridden = applyOverrides(base);
+    return applyFilters(overridden, state.filters);
+  }, [state.navView, state.accountId, state.groupId, state.filters, applyOverrides]);
 
   const matchCount = currentTabRows.length;
 
@@ -187,6 +219,8 @@ export function Inbox2Shell({
         accounts={accounts}
         accountId={state.accountId}
         onAccountChange={(id) => patch({ accountId: id, selectedMessageId: null })}
+        filters={state.filters}
+        onFiltersChange={(next) => patch({ filters: next, selectedMessageId: null })}
       />
       <Inbox2ResizableBody
         left={
@@ -198,6 +232,7 @@ export function Inbox2Shell({
             groupId={state.groupId}
             onGroupChange={(id) => patch({ groupId: id, selectedMessageId: null })}
             groupBadges={groupBadges}
+            onOpenSettings={() => setSettingsOpen(true)}
           />
         }
         center={
@@ -222,6 +257,7 @@ export function Inbox2Shell({
         }
         right={<Inbox2PreviewPane row={selectedRow} onClose={onPreviewClose} />}
       />
+      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
     </div>
   );
 }

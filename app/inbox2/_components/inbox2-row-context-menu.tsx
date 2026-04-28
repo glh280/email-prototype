@@ -27,7 +27,8 @@ import {
   ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import { GROUPS, ACCOUNTS } from "@/mock/inbox2";
+import { GROUPS } from "@/mock/inbox2";
+import { WORKSPACE_USERS } from "@/mock/settings";
 import type { InboxRow } from "@/mock/types";
 
 type Props = {
@@ -114,13 +115,13 @@ export function Inbox2RowContextMenu({
         <ContextMenuSub>
           <ContextMenuSubTrigger>Assign to…</ContextMenuSubTrigger>
           <ContextMenuSubContent>
-            <ContextMenuLabel>Teammates</ContextMenuLabel>
-            {ACCOUNTS.map((a) => (
+            <ContextMenuLabel>Workspace members</ContextMenuLabel>
+            {WORKSPACE_USERS.filter((u) => u.status === "active").map((u) => (
               <ContextMenuItem
-                key={a.id}
-                onClick={() => stub("assign", { assigneeId: a.id })}
+                key={u.id}
+                onClick={() => stub("assign", { assigneeId: u.id, name: u.name })}
               >
-                {a.displayName}
+                {u.name}
               </ContextMenuItem>
             ))}
             <ContextMenuSeparator />

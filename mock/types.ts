@@ -255,6 +255,15 @@ export type LinkedEmail = {
 //       core value: stage-update, assign, reply-template, follow-up,
 //       file-update, flag.
 //
+// 2026-04-28 — Inbox2Filters + Inbox2ShellState.filters
+//   Sources: new
+//     - Inbox2Filters: { unread?, highPriority?, hasAttachment?,
+//       fileLinked?, dateRange?, mailboxes? }. Lives on shell state.
+//       Applied inside currentTabRows derivation. Filter popover in the
+//       top bar is the only writer. L2+ moves to URL params for
+//       shareable filtered views.
+//     - DateRangePreset union: "today" | "7d" | "30d" | "all".
+//
 // (add entries below as iteration extends types)
 
 export type InboxTab = "all" | "by-file" | "multi-file" | "unassigned" | "team" | "spam";
@@ -510,7 +519,36 @@ export type Inbox2ShellState = {
   // Row-level mark-read / mark-unread overrides from the right-click
   // context menu. Keyed by messageId. See CHANGE LOG entry 2026-04-28.
   unreadOverrides: Record<InboxRow["messageId"], boolean>;
+  // Top-bar Filter popover state. Applied inside currentTabRows
+  // derivation. See CHANGE LOG entry 2026-04-28 — Inbox2Filters.
+  filters: Inbox2Filters;
 };
+
+export type DateRangePreset = "today" | "7d" | "30d" | "all";
+
+export type Inbox2Filters = {
+  unread?: boolean;
+  highPriority?: boolean;
+  hasAttachment?: boolean;
+  fileLinked?: boolean;
+  dateRange?: DateRangePreset;
+  /** Empty array = no mailbox filter; non-empty = include only these. */
+  mailboxes?: string[];
+};
+
+export const EMPTY_INBOX_FILTERS: Inbox2Filters = {};
+
+/** Count of active filter dimensions — used for the top-bar button badge. */
+export function countActiveFilters(f: Inbox2Filters): number {
+  let n = 0;
+  if (f.unread) n++;
+  if (f.highPriority) n++;
+  if (f.hasAttachment) n++;
+  if (f.fileLinked) n++;
+  if (f.dateRange && f.dateRange !== "all") n++;
+  if (f.mailboxes && f.mailboxes.length > 0) n++;
+  return n;
+}
 
 /**
  * Badge counter split by urgency. UI rule:

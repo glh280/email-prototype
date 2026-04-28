@@ -26,6 +26,7 @@ import {
   Trash2,
   ShieldAlert,
   Tag,
+  Settings,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -55,6 +56,8 @@ type Props = {
   groupId: Group["id"];
   onGroupChange: (next: Group["id"]) => void;
   groupBadges?: Partial<Record<Group["id"], ViewBadge>>;
+  /** Open the Settings dialog (full-viewport overlay, not a route). */
+  onOpenSettings: () => void;
 };
 
 export function Inbox2NavRail({
@@ -65,6 +68,7 @@ export function Inbox2NavRail({
   groupId,
   onGroupChange,
   groupBadges,
+  onOpenSettings,
 }: Props) {
   function handleViewClick(next: NavView) {
     if (next === navView) return;
@@ -107,6 +111,24 @@ export function Inbox2NavRail({
           badge={groupBadges?.[g.id]}
         />
       ))}
+
+      {/*
+        Settings opens a full-viewport overlay (SettingsDialog) — not a
+        route. Always pinned to the bottom of the rail; mt-auto pushes it
+        down inside the flex column. Operator stays in inbox context and
+        dismisses with esc / close.
+      */}
+      <button
+        type="button"
+        onClick={onOpenSettings}
+        className={cn(
+          "mt-auto flex items-center gap-2 rounded px-2.5 py-1.5 text-xs text-left transition-colors",
+          "text-muted-foreground hover:bg-background/60 hover:text-foreground",
+        )}
+      >
+        <Settings className="h-3.5 w-3.5 shrink-0" aria-hidden />
+        <span className="flex-1 truncate">Settings</span>
+      </button>
     </nav>
   );
 }
