@@ -24,7 +24,7 @@ export function Inbox2PreviewPane({ row, onClose }: Props) {
   return (
     <aside
       className={cn(
-        "h-full bg-background border-l flex flex-col",
+        "h-full bg-background flex flex-col",
         "min-w-0",
       )}
       aria-label="Message preview"

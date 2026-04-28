@@ -24,7 +24,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { NavView } from "@/mock/types";
+import type { NavView, ViewBadge } from "@/mock/types";
 import { NAV_VIEW_LABEL } from "@/mock/inbox2";
 
 const NAV_ICON: Record<NavView, LucideIcon> = {
@@ -53,10 +53,14 @@ const PRIMARY_ORDER: readonly NavView[] = [
 type Props = {
   navView: NavView;
   onChange: (next: NavView) => void;
-  unreadCounts?: Partial<Record<NavView, number>>;
+  /**
+   * Per-view badge map. `urgent > 0` ⇒ red badge with urgent count;
+   * otherwise neutral badge with `total`.
+   */
+  badges?: Partial<Record<NavView, ViewBadge>>;
 };
 
-export function Inbox2NavRail({ navView, onChange, unreadCounts }: Props) {
+export function Inbox2NavRail({ navView, onChange, badges }: Props) {
   function handleClick(next: NavView) {
     if (next === navView) return;
     // eslint-disable-next-line no-console
@@ -67,7 +71,7 @@ export function Inbox2NavRail({ navView, onChange, unreadCounts }: Props) {
   return (
     <nav
       aria-label="Inbox views"
-      className="h-full w-56 shrink-0 border-r bg-muted/20 px-2 py-3 flex flex-col gap-0.5 overflow-y-auto"
+      className="h-full w-full shrink-0 bg-muted/20 px-2 py-3 flex flex-col gap-0.5 overflow-y-auto"
     >
       {PRIMARY_ORDER.map((v) => (
         <NavButton
@@ -75,7 +79,7 @@ export function Inbox2NavRail({ navView, onChange, unreadCounts }: Props) {
           view={v}
           active={navView === v}
           onClick={() => handleClick(v)}
-          unread={unreadCounts?.[v]}
+          badge={badges?.[v]}
         />
       ))}
       <div className="my-2 border-t" />
@@ -92,14 +96,16 @@ function NavButton({
   view,
   active,
   onClick,
-  unread,
+  badge,
 }: {
   view: NavView;
   active: boolean;
   onClick: () => void;
-  unread?: number;
+  badge?: ViewBadge;
 }) {
   const Icon = NAV_ICON[view];
+  const isUrgent = (badge?.urgent ?? 0) > 0;
+  const count = isUrgent ? badge!.urgent : badge?.total ?? 0;
   return (
     <button
       type="button"
@@ -114,14 +120,23 @@ function NavButton({
     >
       <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden />
       <span className="flex-1 truncate">{NAV_VIEW_LABEL[view]}</span>
-      {unread && unread > 0 ? (
+      {count > 0 ? (
         <span
           className={cn(
             "rounded-full px-1.5 py-0.5 text-[10px] font-medium tabular-nums",
-            active ? "bg-primary text-primary-foreground" : "bg-muted text-foreground",
+            isUrgent
+              ? "bg-rose-500 text-white"
+              : active
+                ? "bg-muted-foreground/20 text-foreground"
+                : "bg-muted text-muted-foreground",
           )}
+          aria-label={
+            isUrgent
+              ? `${badge!.urgent} urgent of ${badge!.total}`
+              : `${count} total`
+          }
         >
-          {unread}
+          {count}
         </span>
       ) : null}
     </button>

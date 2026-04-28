@@ -64,20 +64,22 @@ cookie-persisted `<InboxViewToggle>`. All files net-new for L1.
 | File | Status | Notes |
 |---|---|---|
 | `app/inbox2/page.tsx` | new | Reads `npr-inbox-view` cookie + redirects to /inbox when classic |
-| `app/inbox2/_components/inbox2-shell.tsx` | new | Owns `Inbox2ShellState`; lays out top bar / context line / rail / main / preview |
-| `app/inbox2/_components/inbox2-top-bar.tsx` | new | Workspace label, account, group, compose, notifications, avatar |
+| `app/inbox2/_components/inbox2-shell.tsx` | new | Owns `Inbox2ShellState`; lays out top bar + context line, delegates 3-pane body to `Inbox2ResizableBody`. Iter (2026-04-27): swapped fixed grid for resizable body — right pane now largest by default (Missive/Outlook layout). |
+| `app/inbox2/_components/inbox2-resizable-body.tsx` | new | 3-pane resizable container; px constraints (left 200..320, center 280..520, right >=420 flex-1); pointer-capture drag; ResizeObserver auto-shrinks left/center on viewport shrink so right keeps its minimum. |
+| `app/inbox2/_components/inbox2-top-bar.tsx` | new | Scope row [Classic\|Workspace] · view · workspace · account · group · spacer · compose · notifications · avatar. Iter (2026-04-27): added view selector, reordered to View → Workspace → Account → Group, bell badge follows urgent/total ViewBadge rule. |
+| `app/inbox2/_components/inbox2-view-selector.tsx` | new | Top-bar dropdown for queue type (NavView). Mirrors nav rail state. |
 | `app/inbox2/_components/inbox2-account-selector.tsx` | new | Stubbed onChange — `inbox2-account-selector change` console.log + toast |
 | `app/inbox2/_components/inbox2-group-selector.tsx` | new | Stubbed onChange — `inbox2-group-selector change` console.log + toast |
 | `app/inbox2/_components/inbox2-context-line.tsx` | new | Workspace · Account · Group · View dot-strip |
-| `app/inbox2/_components/inbox2-nav-rail.tsx` | new | Local navView state; click stubbed to console.log |
+| `app/inbox2/_components/inbox2-nav-rail.tsx` | new | Local navView state; click stubbed. Iter (2026-04-27): drop fixed `w-56 border-r` (parent owns width, divider owns line); per-view `ViewBadge` badges (red on urgent, neutral on total). |
 | `app/inbox2/_components/inbox2-sub-header.tsx` | new | Stubbed filter chips + search + Mark all read / Refresh / Sort actions |
 | `app/inbox2/_components/inbox2-message-list.tsx` | new | Filters INBOX_ROWS by accountId + groupId + navView; settings view returns placeholder |
 | `app/inbox2/_components/inbox2-message-row.tsx` | new | Dense single-line row (sender · subject · snippet · time) |
-| `app/inbox2/_components/inbox2-preview-pane.tsx` | new | Placeholder reader card; close stubbed |
+| `app/inbox2/_components/inbox2-preview-pane.tsx` | new | Placeholder reader card; close stubbed. Iter (2026-04-27): drop `border-l` (divider owns line). |
 
 | Path | Status | Notes |
 |---|---|---|
-| `mock/inbox2.ts` | new | Accounts, Groups (5 deal tracks), defaults, NAV_VIEW_LABEL, MOCK_NOTIFICATION_COUNT |
+| `mock/inbox2.ts` | new | Accounts, Groups (5 deal tracks), defaults, NAV_VIEW_LABEL, MOCK_NOTIFICATION_BADGE (ViewBadge), NAV_VIEW_BADGES (per-view ViewBadge map). Iter (2026-04-27): notification count → ViewBadge; added per-view nav-rail badges. |
 | `components/inbox-view-toggle.tsx` | new | Cookie-persisted segmented control [Classic \| Workspace] |
 | `lib/inbox-view-cookie.ts` | new | Shared cookie name + value union — kept out of the toggle module so server pages can import without crossing the use-client boundary |
 

@@ -8,11 +8,10 @@
  * REINTEGRATION: Phase 2+ wires real notification panel + avatar menu
  *   (delegates to AppHeader's user/logout in PROD).
  *
- * Global scope controls: workspace label · account · group · spacer ·
- * compose · notifications · avatar.
- *
- * The view toggle [Classic | Workspace] sits at the far left so the user
- * can flip back to /inbox without hunting.
+ * Iter (2026-04-27): scope row reordered to View · Workspace · Account ·
+ * Group. The [Classic|Workspace] surface toggle stays at the far left.
+ * Bell badge color follows the urgent/total ViewBadge rule (red when
+ * urgent > 0, neutral otherwise).
  */
 
 import { Bell, ChevronDown } from "lucide-react";
@@ -26,12 +25,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import { InboxViewToggle } from "@/components/inbox-view-toggle";
 import { InboxComposeButton } from "@/app/inbox/_components/inbox-compose-button";
 import { Inbox2AccountSelector } from "./inbox2-account-selector";
 import { Inbox2GroupSelector } from "./inbox2-group-selector";
+import { Inbox2ViewSelector } from "./inbox2-view-selector";
 import { DEFAULT_FROM_MAILBOX } from "@/mock/inbox";
-import type { Account, Group } from "@/mock/types";
+import type { Account, Group, NavView, ViewBadge } from "@/mock/types";
 
 type Props = {
   workspaceLabel: string;
@@ -41,7 +42,9 @@ type Props = {
   groups: Group[];
   groupId: Group["id"];
   onGroupChange: (next: Group["id"]) => void;
-  notificationCount: number;
+  navView: NavView;
+  onNavViewChange: (next: NavView) => void;
+  notificationBadge: ViewBadge;
 };
 
 export function Inbox2TopBar({
@@ -52,7 +55,9 @@ export function Inbox2TopBar({
   groups,
   groupId,
   onGroupChange,
-  notificationCount,
+  navView,
+  onNavViewChange,
+  notificationBadge,
 }: Props) {
   const account = accounts.find((a) => a.id === accountId) ?? accounts[0];
   const initials = account.displayName
@@ -65,9 +70,17 @@ export function Inbox2TopBar({
 
   function notifClick() {
     // eslint-disable-next-line no-console
-    console.log("[stub] inbox2-top-bar notifications click", { count: notificationCount });
-    toast(`${notificationCount} notifications — panel stubbed`);
+    console.log("[stub] inbox2-top-bar notifications click", { badge: notificationBadge });
+    const { total, urgent } = notificationBadge;
+    toast(
+      urgent > 0
+        ? `${urgent} urgent · ${total} total — panel stubbed`
+        : `${total} notifications — panel stubbed`,
+    );
   }
+
+  const isUrgent = notificationBadge.urgent > 0;
+  const badgeCount = isUrgent ? notificationBadge.urgent : notificationBadge.total;
 
   function avatarMenuClick(item: string) {
     // eslint-disable-next-line no-console
@@ -79,7 +92,10 @@ export function Inbox2TopBar({
     <header className="border-b bg-background px-4 py-2 flex items-center gap-3 flex-wrap">
       <InboxViewToggle />
       <div className="h-5 w-px bg-border mx-1" aria-hidden />
-      <span className="text-xs font-semibold tracking-tight">{workspaceLabel}</span>
+      <Inbox2ViewSelector navView={navView} onChange={onNavViewChange} />
+      <span className="text-xs font-semibold tracking-tight text-muted-foreground">
+        {workspaceLabel}
+      </span>
       <Inbox2AccountSelector
         accounts={accounts}
         accountId={accountId}
@@ -95,13 +111,24 @@ export function Inbox2TopBar({
       <button
         type="button"
         onClick={notifClick}
-        aria-label="Notifications"
+        aria-label={
+          isUrgent
+            ? `Notifications — ${notificationBadge.urgent} urgent of ${notificationBadge.total}`
+            : `Notifications — ${notificationBadge.total}`
+        }
         className="relative rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
       >
         <Bell className="h-4 w-4" />
-        {notificationCount > 0 ? (
-          <span className="absolute -right-0.5 -top-0.5 rounded-full bg-rose-500 text-white text-[9px] font-medium leading-none px-1 py-0.5 tabular-nums">
-            {notificationCount}
+        {badgeCount > 0 ? (
+          <span
+            className={cn(
+              "absolute -right-0.5 -top-0.5 rounded-full text-[9px] font-medium leading-none px-1 py-0.5 tabular-nums",
+              isUrgent
+                ? "bg-rose-500 text-white"
+                : "bg-muted-foreground/80 text-background",
+            )}
+          >
+            {badgeCount}
           </span>
         ) : null}
       </button>

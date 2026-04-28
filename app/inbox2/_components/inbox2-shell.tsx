@@ -7,11 +7,14 @@
  * REINTEGRATION: Phase 2+ lifts state to URL params + server-driven
  *   message list; preview pane gains real thread reader.
  *
- * Phase 1 layout grid:
- *   ┌───────────────────────── TopBar ─────────────────────────┐
- *   ├──────────────────────── ContextLine ─────────────────────┤
- *   │ NavRail │ SubHeader + MessageList   │ Preview pane       │
- *   └─────────┴───────────────────────────┴────────────────────┘
+ * Phase 1 layout grid (body is now resizable, see Inbox2ResizableBody):
+ *   ┌────────────────────────── TopBar ─────────────────────────┐
+ *   ├───────────────────────── ContextLine ─────────────────────┤
+ *   │ NavRail ║ SubHeader + MessageList ║ Preview pane          │
+ *   │  200..  ║       280..520          ║   >= 420 (flex-1)     │
+ *   │  320 px ║         px              ║                       │
+ *   └─────────╨─────────────────────────╨───────────────────────┘
+ *   ║ = draggable divider
  *
  * Owns Inbox2ShellState. All children receive props + change handlers.
  * No URL state in Phase 1; refresh resets selectedMessageId and resets
@@ -25,6 +28,7 @@ import type {
   Inbox2ShellState,
   InboxRow,
   NavView,
+  ViewBadge,
 } from "@/mock/types";
 import { Inbox2TopBar } from "./inbox2-top-bar";
 import { Inbox2ContextLine } from "./inbox2-context-line";
@@ -32,6 +36,7 @@ import { Inbox2NavRail } from "./inbox2-nav-rail";
 import { Inbox2SubHeader } from "./inbox2-sub-header";
 import { Inbox2MessageList } from "./inbox2-message-list";
 import { Inbox2PreviewPane } from "./inbox2-preview-pane";
+import { Inbox2ResizableBody } from "./inbox2-resizable-body";
 
 type Props = {
   rows: InboxRow[];
@@ -41,7 +46,8 @@ type Props = {
   defaultAccountId: Account["id"];
   defaultGroupId: Group["id"];
   defaultNavView: NavView;
-  notificationCount: number;
+  notificationBadge: ViewBadge;
+  navViewBadges?: Partial<Record<NavView, ViewBadge>>;
 };
 
 export function Inbox2Shell({
@@ -52,7 +58,8 @@ export function Inbox2Shell({
   defaultAccountId,
   defaultGroupId,
   defaultNavView,
-  notificationCount,
+  notificationBadge,
+  navViewBadges,
 }: Props) {
   const [state, setState] = useState<Inbox2ShellState>({
     accountId: defaultAccountId,
@@ -108,7 +115,9 @@ export function Inbox2Shell({
         groups={groups}
         groupId={state.groupId}
         onGroupChange={(id) => patch({ groupId: id, selectedMessageId: null })}
-        notificationCount={notificationCount}
+        navView={state.navView}
+        onNavViewChange={(v) => patch({ navView: v, selectedMessageId: null })}
+        notificationBadge={notificationBadge}
       />
       <Inbox2ContextLine
         workspaceLabel={workspaceLabel}
@@ -116,25 +125,30 @@ export function Inbox2Shell({
         group={group}
         navView={state.navView}
       />
-      <div className="flex-1 grid grid-cols-[14rem_minmax(0,1fr)_22rem] min-h-0">
-        <Inbox2NavRail
-          navView={state.navView}
-          onChange={(v) => patch({ navView: v, selectedMessageId: null })}
-        />
-        <div className="flex flex-col min-w-0 min-h-0 border-r">
-          <Inbox2SubHeader navView={state.navView} matchCount={matchCount} />
-          <div className="flex-1 min-h-0 overflow-hidden">
-            <Inbox2MessageList
-              accountId={state.accountId}
-              groupId={state.groupId}
-              navView={state.navView}
-              selectedMessageId={state.selectedMessageId}
-              onSelect={onSelect}
-            />
-          </div>
-        </div>
-        <Inbox2PreviewPane row={selectedRow} onClose={onPreviewClose} />
-      </div>
+      <Inbox2ResizableBody
+        left={
+          <Inbox2NavRail
+            navView={state.navView}
+            onChange={(v) => patch({ navView: v, selectedMessageId: null })}
+            badges={navViewBadges}
+          />
+        }
+        center={
+          <>
+            <Inbox2SubHeader navView={state.navView} matchCount={matchCount} />
+            <div className="flex-1 min-h-0 overflow-hidden">
+              <Inbox2MessageList
+                accountId={state.accountId}
+                groupId={state.groupId}
+                navView={state.navView}
+                selectedMessageId={state.selectedMessageId}
+                onSelect={onSelect}
+              />
+            </div>
+          </>
+        }
+        right={<Inbox2PreviewPane row={selectedRow} onClose={onPreviewClose} />}
+      />
     </div>
   );
 }

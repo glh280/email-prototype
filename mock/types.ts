@@ -207,6 +207,15 @@ export type LinkedEmail = {
 //       navView, selectedMessageId)
 //     - InboxRow: extended with optional accountId + groupId so rows can
 //       scope to context
+//
+// 2026-04-27 — Badge urgency model (workspace shell visual iteration)
+//   Sources: new
+//     - ViewBadge { total, urgent }: counts split by severity. UI rule:
+//       urgent > 0 ⇒ red badge with urgent count. urgent === 0 ⇒ neutral
+//       badge with total. Applies to bell notification + nav rail per-view
+//       counts.
+//     - "Urgent" semantic: failed match/triage, overdue, unassigned
+//       critical, anything that should pull operator attention NOW.
 // (add entries below as iteration extends types)
 
 export type InboxTab = "all" | "by-file" | "multi-file" | "unassigned" | "team" | "spam";
@@ -424,4 +433,15 @@ export type Inbox2ShellState = {
   groupId: Group["id"];
   navView: NavView;
   selectedMessageId: InboxRow["messageId"] | null;
+};
+
+/**
+ * Badge counter split by urgency. UI rule:
+ *   urgent > 0 ⇒ red badge showing `urgent`
+ *   urgent === 0 && total > 0 ⇒ neutral badge showing `total`
+ *   total === 0 ⇒ no badge
+ */
+export type ViewBadge = {
+  total: number;
+  urgent: number;
 };

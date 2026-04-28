@@ -29,7 +29,8 @@ import {
   DEFAULT_ACCOUNT_ID,
   DEFAULT_GROUP_ID,
   DEFAULT_NAV_VIEW,
-  MOCK_NOTIFICATION_COUNT,
+  MOCK_NOTIFICATION_BADGE,
+  NAV_VIEW_BADGES,
 } from "@/mock/inbox2";
 
 export default async function Inbox2Page() {
@@ -48,7 +49,8 @@ export default async function Inbox2Page() {
         defaultAccountId={DEFAULT_ACCOUNT_ID}
         defaultGroupId={DEFAULT_GROUP_ID}
         defaultNavView={DEFAULT_NAV_VIEW}
-        notificationCount={MOCK_NOTIFICATION_COUNT}
+        notificationBadge={MOCK_NOTIFICATION_BADGE}
+        navViewBadges={NAV_VIEW_BADGES}
       />
     </>
   );

@@ -6,7 +6,7 @@
 // REINTEGRATION: replaced by `queryAccountsForUser` + `queryGroupsForUser`
 //   in L2; this file is deleted at L2 (DB-backed reads).
 
-import type { Account, Group, NavView } from "./types";
+import type { Account, Group, NavView, ViewBadge } from "./types";
 
 export const WORKSPACE_LABEL = "NPR Funding";
 
@@ -47,8 +47,24 @@ export const NAV_VIEW_LABEL: Record<NavView, string> = {
   "settings": "Settings",
 };
 
-/** Mock unread count for the bell icon in the top bar. */
-export const MOCK_NOTIFICATION_COUNT = 3;
+/**
+ * Mock unread count for the bell icon in the top bar. Split by urgency
+ * so the badge color rule (red for urgent, neutral for normal) has data
+ * to work with.
+ */
+export const MOCK_NOTIFICATION_BADGE: ViewBadge = { total: 3, urgent: 1 };
+
+/**
+ * Per-nav-view badge counts shown in the left rail. Only views with a
+ * non-zero count are included. `urgent` drives red highlighting.
+ */
+export const NAV_VIEW_BADGES: Partial<Record<NavView, ViewBadge>> = {
+  all:        { total: 7,  urgent: 0 },
+  unassigned: { total: 4,  urgent: 2 },
+  team:       { total: 12, urgent: 0 },
+  spam:       { total: 1,  urgent: 0 },
+  drafts:     { total: 2,  urgent: 0 },
+};
 
 export function findAccount(id: Account["id"]): Account {
   const a = ACCOUNTS.find((x) => x.id === id);
