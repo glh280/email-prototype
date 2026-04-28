@@ -10,6 +10,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { NavLinks } from "@/components/nav-links";
+import { InboxHeaderButton } from "@/components/inbox-header-button";
+import { MOCK_INBOX_UNREAD_TOTAL } from "@/mock/inbox";
 
 /**
  * Header with the real Cloudflare Access user pulled in at render time.
@@ -53,21 +55,24 @@ export async function AppHeader() {
         </Link>
         <NavLinks />
       </div>
-      <DropdownMenu>
-        <DropdownMenuTrigger className="outline-none">
-          <Avatar className="h-8 w-8">
-            {user.image ? <AvatarImage src={user.image} alt="" /> : null}
-            <AvatarFallback className="text-xs font-medium">{initials}</AvatarFallback>
-          </Avatar>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem disabled className="text-xs text-muted-foreground">
-            {user.email}
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem render={<a href={logoutUrl}>Sign out</a>} />
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <div className="flex items-center gap-2">
+        <InboxHeaderButton unreadTotal={MOCK_INBOX_UNREAD_TOTAL} />
+        <DropdownMenu>
+          <DropdownMenuTrigger className="outline-none">
+            <Avatar className="h-8 w-8">
+              {user.image ? <AvatarImage src={user.image} alt="" /> : null}
+              <AvatarFallback className="text-xs font-medium">{initials}</AvatarFallback>
+            </Avatar>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem disabled className="text-xs text-muted-foreground">
+              {user.email}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem render={<a href={logoutUrl}>Sign out</a>} />
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     </header>
   );
 }

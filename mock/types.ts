@@ -181,6 +181,115 @@ export type LinkedEmail = {
   receivedAt: string; // ISO
 };
 
+// =============================================================================
+// Email Inbox (L1 — UI prototype only)
+// =============================================================================
+//
+// CHANGE LOG
+// ----------
+// 2026-04-27 — initial port from NPR_Dashboard@a7a31d9b
+//   Sources:
+//     - lib/email-query.ts:687-718  (InboxRow, InboxFilters)
+//     - lib/email-query.ts:720-738  (InboxFilters)
+//     - lib/email-query.ts:740-...  (InboxThreadMessage)
+//     - lib/filter-params.ts        (InboxTab union)
+//     - lib/email-suggestion.ts     (MultiFileCandidate, UnassignedSuggestion)
+//     - db/schema/email-types.ts    (MatchBadgeVariant, EmailMessageLite)
+// (add entries below as iteration extends types)
+
+export type InboxTab = "all" | "by-file" | "multi-file" | "unassigned" | "team" | "spam";
+
+export const INBOX_TAB_ORDER: readonly InboxTab[] = [
+  "all",
+  "by-file",
+  "multi-file",
+  "unassigned",
+  "team",
+  "spam",
+] as const;
+
+export const INBOX_TAB_LABEL: Record<InboxTab, string> = {
+  "all": "All",
+  "by-file": "By File",
+  "multi-file": "Multi-File",
+  "unassigned": "Unassigned",
+  "team": "Team",
+  "spam": "Spam",
+};
+
+export type PriorityTier = "HIGH" | "MEDIUM" | "LOW";
+
+export type InboxMatchBadge = "auto-matched" | "ai-suggested" | "manually-added";
+
+/** Per-candidate row in the Multi-File tab (≥2 candidates ≥70% confidence). */
+export type MultiFileCandidate = {
+  dealId: string;
+  fileNo: string;
+  propertyAddress: string | null;
+  confidence: number;
+  /** Top signal that drove the match (e.g. "matches property address"). */
+  topSignal: string;
+  /** Haiku-generated explanation; null falls back to "Matched on {topSignal}". */
+  aiReason: string | null;
+};
+
+/** Suggestion pill in the Unassigned tab (single highest-confidence candidate ≥70%). */
+export type UnassignedSuggestion = {
+  dealId: string;
+  fileNo: string;
+  propertyAddress: string | null;
+  confidence: number;
+  topSignal: string;
+};
+
+/**
+ * Inbox row shape consumed by every tab's row component. Mirrors PROD
+ * `lib/email-query.ts::InboxRow`. Per-tab optional fields populated only
+ * for the relevant tab (e.g. `candidates` only for multi-file rows).
+ */
+export type InboxRow = {
+  threadId: string;
+  /** Latest message id in the thread — used for the read-state cutoff. */
+  messageId: string;
+  subject: string | null;
+  fromName: string | null;
+  fromAddress: string;
+  /** Which of the 13 mailboxes this thread first appeared in. */
+  mailboxAddress: string | null;
+  snippet: string | null;
+  sentAt: Date;
+  hasAttachment: boolean;
+  priorityScore: number | null;
+  priorityTier: PriorityTier | null;
+  priorityReason: string | null;
+  aiSummary: string | null;
+  matchBadge: InboxMatchBadge | null;
+  /** Local toggle in L1 (no email_read_state table). */
+  isUnread: boolean;
+  // Per-tab optional fields:
+  dealId?: string | null;
+  /** By File tab: groups by deal.file_no. */
+  fileNo?: string | null;
+  /** By File tab: header text. */
+  propertyAddress?: string | null;
+  /** Multi-File tab: ≥2 candidates ≥70%. */
+  candidates?: MultiFileCandidate[];
+  /** Unassigned tab: highest-confidence suggestion ≥70%, if any. */
+  suggestion?: UnassignedSuggestion | null;
+};
+
+export type InboxFilters = {
+  q?: string;
+  priority?: PriorityTier[];
+};
+
+/** Digest row — one file_no with its priority-ordered messages. */
+export type DigestGroup = {
+  fileNo: string | null;
+  propertyAddress: string | null;
+  rows: InboxRow[];
+};
+
 export type LinkedClickUp = {
   id: string;
   label: string;
